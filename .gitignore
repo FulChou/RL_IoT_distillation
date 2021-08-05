@@ -4,7 +4,7 @@ __pycache__/
 .idea
 # C extensions
 *.so
-.DS_Storegit rm -r --cached .
+.DS_Store
 # Distribution / packaging
 .Python
 build/
