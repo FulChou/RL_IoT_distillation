@@ -7,14 +7,16 @@ from tianshou.data import Batch
 from torch import nn
 from utils import get_kl
 
-env_name = 'CartPole-v0'
+env_name = 'Breakout-v0'
 # env = gym.make('CartPole-v0')
 env = gym.make(env_name)
 # train_envs = gym.make('CartPole-v0')
 # test_envs = gym.make('CartPole-v0')
+device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")  # using Gpu print(device) device = 'cpu'
 
-train_envs = ts.env.DummyVectorEnv([lambda: gym.make(env_name) for _ in range(10)])
-test_envs = ts.env.DummyVectorEnv([lambda: gym.make(env_name) for _ in range(100)])
+train_envs = ts.env.SubprocVectorEnv([lambda: gym.make(env_name) for _ in range(10)])
+test_envs = ts.env.SubprocVectorEnv([lambda: gym.make(env_name) for _ in range(100)])
+
 
 class TeacherNet(nn.Module):
     def __init__(self, state_shape, action_shape):
@@ -28,7 +30,7 @@ class TeacherNet(nn.Module):
 
     def forward(self, obs, state=None, info={}):
         if not isinstance(obs, torch.Tensor):
-            obs = torch.tensor(obs, dtype=torch.float)
+            obs = torch.tensor(obs,device=device, dtype=torch.float)
         batch = obs.shape[0]
         logits = self.model(obs.view(batch, -1))
         return logits, state
@@ -46,7 +48,7 @@ class StudentNet(nn.Module):
 
     def forward(self, obs, state=None, info={}):
         if not isinstance(obs, torch.Tensor):
-            obs = torch.tensor(obs, dtype=torch.float)
+            obs = torch.tensor(obs,device=device, dtype=torch.float)
         batch = obs.shape[0]
         logits = self.model(obs.view(batch, -1))
         return logits, state
@@ -54,8 +56,8 @@ class StudentNet(nn.Module):
 
 state_shape = env.observation_space.shape or env.observation_space.n  # (4,)
 action_shape = env.action_space.shape or env.action_space.n  # 2
-net = TeacherNet(state_shape, action_shape)
-net_student = StudentNet(state_shape, action_shape)
+net = TeacherNet(state_shape, action_shape).to(device)
+net_student = StudentNet(state_shape, action_shape).to(device)
 
 optim = torch.optim.Adam(net.parameters(), lr=1e-3)
 optim_student = torch.optim.Adam(net_student.parameters(), lr=1e-3)
@@ -90,7 +92,8 @@ def update_student():
         # input = Batch(obs=Batch(obs=obs,mask=mask))
         teacher = teacher_policy.forward(batch)
         student = student_policy.forward(batch)
-        stds = torch.from_numpy(np.array([1e-6] * len(teacher.logits[0])))
+
+        stds = torch.tensor([1e-6] * len(teacher.logits[0]), device=device, dtype=torch.float)
         stds = torch.stack([stds for _ in range(len(teacher.logits))])
         loss = get_kl([teacher.logits, stds], [student.logits, stds])
         student_policy.optim.zero_grad()
