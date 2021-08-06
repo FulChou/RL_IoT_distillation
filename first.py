@@ -7,7 +7,7 @@ from tianshou.data import Batch
 from torch import nn
 from utils import get_kl
 
-env_name = 'Breakout-v0'
+env_name = 'CartPole-v0'
 # env = gym.make('CartPole-v0')
 env = gym.make(env_name)
 # train_envs = gym.make('CartPole-v0')
@@ -15,8 +15,8 @@ env = gym.make(env_name)
 device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu") # using Gpu
 print(device)
 
-train_envs = ts.env.SubprocVectorEnv([lambda: gym.make(env_name) for _ in range(10)])
-test_envs = ts.env.SubprocVectorEnv([lambda: gym.make(env_name) for _ in range(100)])
+train_envs = ts.env.DummyVectorEnv([lambda: gym.make(env_name) for _ in range(10)])
+test_envs = ts.env.DummyVectorEnv([lambda: gym.make(env_name) for _ in range(100)])
 
 
 class TeacherNet(nn.Module):
