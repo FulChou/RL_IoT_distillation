@@ -12,7 +12,8 @@ env_name = 'Breakout-v0'
 env = gym.make(env_name)
 # train_envs = gym.make('CartPole-v0')
 # test_envs = gym.make('CartPole-v0')
-device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")  # using Gpu print(device) device = 'cpu'
+device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu") # using Gpu
+print(device)
 
 train_envs = ts.env.SubprocVectorEnv([lambda: gym.make(env_name) for _ in range(10)])
 test_envs = ts.env.SubprocVectorEnv([lambda: gym.make(env_name) for _ in range(100)])
@@ -87,12 +88,9 @@ def update_student():
     sample_size = 10
     if len(train_collector.buffer) > sample_size:
         batch, indice = train_collector.buffer.sample(sample_size)
-
-
         # input = Batch(obs=Batch(obs=obs,mask=mask))
         teacher = teacher_policy.forward(batch)
         student = student_policy.forward(batch)
-
         stds = torch.tensor([1e-6] * len(teacher.logits[0]), device=device, dtype=torch.float)
         stds = torch.stack([stds for _ in range(len(teacher.logits))])
         loss = get_kl([teacher.logits, stds], [student.logits, stds])
