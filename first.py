@@ -15,8 +15,8 @@ env = gym.make(env_name)
 device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu") # using Gpu
 print(device)
 
-train_envs = ts.env.DummyVectorEnv([lambda: gym.make(env_name) for _ in range(10)])
-test_envs = ts.env.DummyVectorEnv([lambda: gym.make(env_name) for _ in range(100)])
+train_envs = ts.env.SubprocVectorEnv([lambda: gym.make(env_name) for _ in range(10)])
+test_envs = ts.env.SubprocVectorEnv([lambda: gym.make(env_name) for _ in range(100)])
 
 
 class TeacherNet(nn.Module):

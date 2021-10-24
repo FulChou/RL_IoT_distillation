@@ -7,7 +7,7 @@ from tianshou.data import Batch
 from torch import nn
 from utils import get_kl
 
-env_name = 'Breakout-v0'
+env_name = 'Qbert-v0'
 # env = gym.make('CartPole-v0')
 env = gym.make(env_name)
 # train_envs = gym.make('CartPole-v0')
