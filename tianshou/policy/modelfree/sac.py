@@ -113,10 +113,9 @@ class SACPolicy(DDPGPolicy):
     ) -> Batch:
         obs = batch[input]
         logits, h = self.actor(obs, state=state, info=batch.info)
-        # print('sac logits: ', logits, ) # return (mu, sigma) TODO: 打印出来看看，应该使用 断点
         assert isinstance(logits, tuple)
         dist = Independent(Normal(*logits), 1)
-        if self._deterministic_eval and not self.training: # 确定策略 or in evalation choose mean
+        if self._deterministic_eval and not self.training:  # 确定策略 or in evalation choose mean
             act = logits[0]
         else:
             act = dist.rsample()
@@ -150,10 +149,10 @@ class SACPolicy(DDPGPolicy):
         # critic 1&2
         td1, critic1_loss = self._mse_optimizer(
             batch, self.critic1, self.critic1_optim)
+
         td2, critic2_loss = self._mse_optimizer(
             batch, self.critic2, self.critic2_optim)
         batch.weight = (td1 + td2) / 2.0  # prio-buffer
-
         # actor
         obs_result = self(batch)
         a = obs_result.act
@@ -161,6 +160,8 @@ class SACPolicy(DDPGPolicy):
         current_q2a = self.critic2(batch.obs, a).flatten()
         actor_loss = (self._alpha * obs_result.log_prob.flatten()
                       - torch.min(current_q1a, current_q2a)).mean()
+
+        actor_loss.clamp(-200, 0)
         self.actor_optim.zero_grad()
         actor_loss.backward()
         self.actor_optim.step()

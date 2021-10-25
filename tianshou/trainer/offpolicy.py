@@ -107,7 +107,6 @@ def offpolicy_trainer(
     best_student_reward_std = 0
     best_student_epoch = 0
     is_update_student = True
-    first_up_0 = False
     if test_student_collector and policy_student:
         test_student_collector.reset_stat()
         test_student_result = test_student_episode(policy_student, test_student_collector, test_fn, start_epoch,
@@ -125,7 +124,7 @@ def offpolicy_trainer(
                 if train_fn:
                     train_fn(epoch, env_step)
                 if update_student_fn and is_update_student:  # every epoch update student maybe couldn't need so many update
-                    update_student_fn(logger=logger, step=env_step)
+                    update_student_fn(logger=logger, step=env_step,)
                 result = train_collector.collect(n_step=step_per_collect)
                 if result["n/ep"] > 0 and reward_metric:
                     result["rews"] = reward_metric(result["rews"])
