@@ -161,7 +161,7 @@ class SACPolicy(DDPGPolicy):
         actor_loss = (self._alpha * obs_result.log_prob.flatten()
                       - torch.min(current_q1a, current_q2a)).mean()
 
-        actor_loss.clamp(-200, 0)
+        actor_loss = torch.clamp(actor_loss, -500, 0)
         self.actor_optim.zero_grad()
         actor_loss.backward()
         self.actor_optim.step()

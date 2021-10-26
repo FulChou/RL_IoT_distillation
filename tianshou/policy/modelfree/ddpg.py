@@ -150,7 +150,7 @@ class DDPGPolicy(BasePolicy):
         # critic_loss = F.mse_loss(current_q1, target_q)
         critic_loss = (td.pow(2) * weight).mean()
         # add critic loss clamp
-        critic_loss.clamp(100, 0)
+        critic_loss = torch.clamp(critic_loss, 0.0001, 100)
         optimizer.zero_grad()
         critic_loss.backward()
         optimizer.step()
