@@ -1,10 +1,12 @@
+import datetime
 import os
 import torch
 import pprint
 import argparse
 import numpy as np
+import sys
 from torch.utils.tensorboard import SummaryWriter
-
+sys.path.append(os.path.join(os.path.dirname(__file__),'..'))
 from tianshou.policy import DQNPolicy
 from tianshou.utils import BasicLogger
 from tianshou.env import SubprocVectorEnv
@@ -93,7 +95,10 @@ def test_dqn(args=get_args()):
     train_collector = Collector(policy, train_envs, buffer, exploration_noise=True)
     test_collector = Collector(policy, test_envs, exploration_noise=True)
     # log
-    log_path = os.path.join(args.logdir, args.task, 'dqn')
+    t0 = datetime.datetime.now().strftime("%m%d_%H%M%S")
+    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}_vanilla'
+    log_path = os.path.join(args.logdir, args.task, 'dqn', log_file)
+    print(log_path)
     writer = SummaryWriter(log_path)
     writer.add_text("args", str(args))
     logger = BasicLogger(writer)

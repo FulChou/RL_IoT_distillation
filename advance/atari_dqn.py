@@ -15,7 +15,7 @@ from tianshou.env import SubprocVectorEnv
 from tianshou.trainer import offpolicy_trainer
 from tianshou.data import Collector, VectorReplayBuffer
 
-from atari_network import DQN
+from atari_network import DQN, student_DQN
 from atari_wrapper import wrap_deepmind
 
 
@@ -83,7 +83,8 @@ def test_dqn(args=get_args()):
     # define model
     net = DQN(*args.state_shape,
               args.action_shape, args.device).to(args.device)
-    student_net = DQN(*args.state_shape,
+
+    student_net = student_DQN(*args.state_shape,
               args.action_shape, args.device).to(args.device)
 
     optim = torch.optim.Adam(net.parameters(), lr=args.lr)
@@ -110,7 +111,7 @@ def test_dqn(args=get_args()):
 
     # log
     t0 = datetime.datetime.now().strftime("%m%d_%H%M%S")
-    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}'
+    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}_down2_1'
     log_path = os.path.join(args.logdir, args.task, 'dqn', log_file)
     writer = SummaryWriter(log_path)
     writer.add_text("args", str(args))
@@ -182,7 +183,10 @@ def test_dqn(args=get_args()):
         sample_size = 32
         batch, indice = train_collector.buffer.sample(sample_size)
         # input = Batch(obs=Batch(obs=obs,mask=mask))
-        teacher = policy.forward(batch)
+        if best_teacher_policy:
+            teacher = best_teacher_policy.forward(batch)
+        else:
+            teacher = policy.forward(batch)
         student = policy_student.forward(batch)
         stds = torch.tensor([1e-6] * len(teacher.logits[0]), device=args.device, dtype=torch.float)
         stds = torch.stack([stds for _ in range(len(teacher.logits))])
