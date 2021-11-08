@@ -61,7 +61,7 @@ class student_DQN(DQN):
             action_shape: Sequence[int],
             device: Union[str, int, torch.device] = "cpu",
             features_only: bool = False,
-            multiple_down:int = 1,
+            multiple_down: int = 1,
     ) -> None:
         super().__init__(c, h, w, action_shape, device, features_only)
         self.device = device
@@ -76,8 +76,8 @@ class student_DQN(DQN):
         if not features_only:
             self.net = nn.Sequential(
                 self.net,
-                nn.Linear(self.output_dim, 512//multiple_down), nn.ReLU(inplace=True),
-                nn.Linear(512//multiple_down, np.prod(action_shape)))
+                nn.Linear(self.output_dim, 512//4), nn.ReLU(inplace=True),
+                nn.Linear(512//4, np.prod(action_shape)))
             self.output_dim = np.prod(action_shape)
 
     def forward(

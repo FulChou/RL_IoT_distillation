@@ -85,7 +85,7 @@ def test_dqn(args=get_args()):
               args.action_shape, args.device).to(args.device)
 
     student_net = student_DQN(*args.state_shape,
-              args.action_shape, args.device).to(args.device)
+              args.action_shape, args.device, multiple_down=1).to(args.device)
 
     optim = torch.optim.Adam(net.parameters(), lr=args.lr)
     student_optim = torch.optim.Adam(student_net.parameters(), lr=args.lr)
@@ -93,7 +93,7 @@ def test_dqn(args=get_args()):
     policy = DQNPolicy(net, optim, args.gamma, args.n_step,
                        target_update_freq=args.target_update_freq)
     policy_student = DQNPolicy(student_net, student_optim, args.gamma, args.n_step,
-                       target_update_freq=args.target_update_freq) # test  target_update_freq = 0
+                       target_update_freq=args.target_update_freq)  # test  target_update_freq = 0
 
     # load a previous policy
     if args.resume_path:
