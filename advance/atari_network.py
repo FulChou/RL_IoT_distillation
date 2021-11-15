@@ -66,9 +66,9 @@ class student_DQN(DQN):
         super().__init__(c, h, w, action_shape, device, features_only)
         self.device = device
         self.net = nn.Sequential(
-            nn.Conv2d(c, 32//multiple_down, kernel_size=8, stride=4), nn.ReLU(inplace=True),
-            nn.Conv2d(32//multiple_down, 64//multiple_down, kernel_size=4, stride=2), nn.ReLU(inplace=True),
-            nn.Conv2d(64//multiple_down, 64//multiple_down, kernel_size=3, stride=1), nn.ReLU(inplace=True),
+            nn.Conv2d(c, 16, kernel_size=8, stride=4), nn.ReLU(inplace=True),
+            nn.Conv2d(32, 32, kernel_size=4, stride=2), nn.ReLU(inplace=True),
+            nn.Conv2d(32, 64, kernel_size=3, stride=1), nn.ReLU(inplace=True),
             nn.Flatten())
         with torch.no_grad():
             self.output_dim = np.prod(
@@ -76,8 +76,8 @@ class student_DQN(DQN):
         if not features_only:
             self.net = nn.Sequential(
                 self.net,
-                nn.Linear(self.output_dim, 512//4), nn.ReLU(inplace=True),
-                nn.Linear(512//4, np.prod(action_shape)))
+                nn.Linear(self.output_dim, 256), nn.ReLU(inplace=True),
+                nn.Linear(256, np.prod(action_shape)))
             self.output_dim = np.prod(action_shape)
 
     def forward(

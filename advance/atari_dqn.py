@@ -111,7 +111,7 @@ def test_dqn(args=get_args()):
 
     # log
     t0 = datetime.datetime.now().strftime("%m%d_%H%M%S")
-    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}_down2_1'
+    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}_net1'
     log_path = os.path.join(args.logdir, args.task, 'dqn', log_file)
     writer = SummaryWriter(log_path)
     writer.add_text("args", str(args))
