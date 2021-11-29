@@ -123,8 +123,8 @@ def offpolicy_trainer(
             while t.n < t.total:
                 if train_fn:
                     train_fn(epoch, env_step)
-                if update_student_fn and is_update_student:  # every epoch update student maybe couldn't need so many update
-                    update_student_fn(logger=logger, step=env_step,)
+                # if update_student_fn and is_update_student:  # every epoch update student maybe couldn't need so many update
+                #     update_student_fn(logger=logger, step=env_step,)
                 result = train_collector.collect(n_step=step_per_collect)
                 if result["n/ep"] > 0 and reward_metric:
                     result["rews"] = reward_metric(result["rews"])
@@ -205,8 +205,8 @@ def offpolicy_trainer(
                     save_student_policy_fn(policy_student)
 
         logger.save_data(epoch, env_step, gradient_step, save_checkpoint_fn)
-        # if update_student_fn:  # every epoch update student maybe couldn't need so many update
-        #     update_student_fn(logger=logger, step=env_step, update_times=5000, sample_size=1, )
+        if update_student_fn:  # every epoch update student maybe couldn't need so many update
+            update_student_fn(logger=logger, step=env_step)
             # update_student_fn(logger=logger, step=env_step, update_times=5000, sample_size=1, is_update_student=is_update_student)
 
         if verbose:

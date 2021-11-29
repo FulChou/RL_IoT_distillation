@@ -9,11 +9,11 @@ for element in ${TASK[*]}
 do
   echo $element"env"
   /home/zhoufu/.conda/envs/pd3.7.5_zf/bin/python \
-  -u /home/zhoufu/drl_iot/RL_IoT_distillation/advance/atari_dqn.py \
+  -u /home/zhoufu/drl_iot/RL_IoT_distillation/advance/atari_dqn_net1.py \
   --task $element"NoFrameskip-v4"\
   --test-num 100 \
   --epoch 130 \
-  --net-num net2
+  --net-num net1
 done
 echo "Experiments ended"
 
