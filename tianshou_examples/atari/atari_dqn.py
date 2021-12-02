@@ -1,3 +1,4 @@
+import datetime
 import os
 import torch
 import pprint
@@ -93,7 +94,9 @@ def test_dqn(args=get_args()):
     train_collector = Collector(policy, train_envs, buffer, exploration_noise=True)
     test_collector = Collector(policy, test_envs, exploration_noise=True)
     # log
-    log_path = os.path.join(args.logdir, args.task, 'dqn')
+    t0 = datetime.datetime.now().strftime("%m%d_%H%M%S")
+    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}'
+    log_path = os.path.join(args.logdir, args.task, 'dqn', log_file)
     writer = SummaryWriter(log_path)
     writer.add_text("args", str(args))
     logger = BasicLogger(writer)

@@ -173,11 +173,6 @@ def offpolicy_trainer(
                                    episode_per_test, logger, env_step, reward_metric)
         print('test time:', time.perf_counter() - test_time)
         rew, rew_std = test_result["rew"], test_result["rew_std"]
-        #  the flag control whether update student
-        # if rew < 0 and env_step > 400000:
-        #     is_update_student = False
-        # else:
-        #     is_update_student = True
 
         if best_epoch < 0 or best_reward < rew:
             best_epoch, best_reward, best_reward_std = epoch, rew, rew_std
