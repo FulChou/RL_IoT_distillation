@@ -204,43 +204,35 @@ def distill_dqn(args=get_args()):
         watch()
         exit(0)
 
+    # really distill
+    train_collector.collect(n_step=args.batch_size * args.training_num)
+    for epoch in range(args.args.epoch):
+        for step in range(args.step_per_epoch):
+            # 是否需要先去 collect 然后再 forward，直接与环境交互即，collect时候记录结果不好吗？ 去看看tianshou源码
+            batch, indice = train_collector.buffer.sample(n_step=args.batch_size * args.training_num)
 
-    def update_student():
-        train_collector.collect(n_step=args.batch_size * args.training_num)
-        update_times = 1
-        for _ in range(update_times):
-            # 学习蒸馏算法去！
-            sample_size = 1
-            batch, indice = train_collector.buffer.sample(1)
-            # input = Batch(obs=Batch(obs=obs,mask=mask))
-
-            student_policy.eval()
-            student_policy.set_eps(args.eps_test)
-
+            teacher_policy.eval()
+            teacher_policy.set_eps(args.eps_test)
             teacher = teacher_policy.forward(batch)
             student = student_policy.forward(batch)
             stds = torch.tensor([1e-6] * len(teacher.logits[0]), device=args.device, dtype=torch.float)
             stds = torch.stack([stds for _ in range(len(teacher.logits))])
             loss = get_kl([teacher.logits, stds], [student.logits, stds])
+            # TODO: add loss log：
             student_policy.optim.zero_grad()
             loss.backward()
             student_policy.optim.step()
+        # TODO: add student_policy test log
 
-    # test train_collector and start filling replay buffer
-    train_collector.collect(n_step=args.batch_size * args.training_num)
+    # def update_student():
+    #     update_times = 1
+    #     for _ in range(args.step_per_collect):
+    #         # 学习蒸馏算法去！
+    #         sample_size = 1
+    #         batch, indice = train_collector.buffer.sample(1)
+    #         # input = Batch(obs=Batch(obs=obs,mask=mask))
 
-    # # trainer
-    # result = offpolicy_trainer(
-    #     policy, train_collector, test_collector, args.epoch,
-    #     args.step_per_epoch, args.step_per_collect, args.test_num,
-    #     args.batch_size, train_fn=train_fn,
-    #     update_student_fn=update_student, test_student_collector=test_student_collector, policy_student=policy_student,
-    #     save_student_policy_fn=save_student_policy_fn,
-    #     test_fn=test_fn, stop_fn=stop_fn, save_fn=save_fn, logger=logger,
-    #     update_per_step=args.update_per_step, test_in_train=False)
-    #
-    # pprint.pprint(result)
-
+    # eval student
     watch()
 
 
