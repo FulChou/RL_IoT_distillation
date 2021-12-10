@@ -4,15 +4,19 @@ import argparse
 import datetime
 import os
 import sys
+import time
 
 import numpy as np
 import torch
 from torch.utils.tensorboard import SummaryWriter
+import tqdm
 
+from tianshou.trainer import test_episode
+from tianshou.trainer.utils import test_student_episode
 from utils import get_kl
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))  # 使得命令行直接调用时，能够访问到我们自定义的tianshou
-from tianshou.utils import BasicLogger
+from tianshou.utils import BasicLogger, tqdm_config
 from tianshou.env import SubprocVectorEnv
 from tianshou.policy import DQNPolicy
 from tianshou.data import Collector, VectorReplayBuffer
@@ -40,7 +44,7 @@ def get_args():
     parser.add_argument('--update-per-step', type=float, default=0.1)
     parser.add_argument('--batch-size', type=int, default=32)
     parser.add_argument('--training-num', type=int, default=10)
-    parser.add_argument('--test-num', type=int, default=100)
+    parser.add_argument('--test-num', type=int, default=30)
     parser.add_argument('--logdir', type=str, default='log')
     parser.add_argument('--net-num', type=str, default='net0')
     parser.add_argument('--render', type=float, default=0.)
@@ -88,7 +92,7 @@ def get_student_policy(args):
     :param args:
     :return: policy
     """
-    student_net = student_DQN_net1(*args.state_shape, args.action_shape, args.device, multiple_down=1).to(args.device)
+    student_net = student_DQN_net1(*args.state_shape, args.action_shape, args.device).to(args.device)
     student_optim = torch.optim.Adam(student_net.parameters(), lr=args.lr)
     policy_student = DQNPolicy(student_net, student_optim, args.gamma, args.n_step,
                                target_update_freq=args.target_update_freq)  # test  target_update_freq = 0
@@ -116,8 +120,8 @@ def distill_dqn(args=get_args()):
     test_envs.seed(args.seed)
 
     # define model and policy
-    teacher_policy = get_teacher_policy(args=get_args())
-    student_policy = get_student_policy(args=get_args())
+    teacher_policy = get_teacher_policy(args=args)
+    student_policy = get_student_policy(args=args)
 
     # replay buffer: `save_last_obs` and `stack_num` can be removed together
     # when you have enough RAM
@@ -134,20 +138,20 @@ def distill_dqn(args=get_args()):
     # log
     t0 = datetime.datetime.now().strftime("%m%d_%H%M%S")
     log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}'
-    log_path = os.path.join(args.logdir, args.task, 'dqn', log_file)
+    log_path = os.path.join(args.logdir, 'distll', args.task, 'dqn', log_file)
+    print('log_path', log_path)
     writer = SummaryWriter(log_path)
     writer.add_text("args", str(args))
     logger = BasicLogger(writer)
-
     #
     # def save_fn(policy):
     #     print('sava model at: ', os.path.join(log_path, 'policy.pth'))
     #     torch.save(policy.state_dict(), os.path.join(log_path, 'policy.pth'))
     #
-    # def save_student_policy_fn(policy):
-    #     print('sava model at: ', os.path.join(log_path, 'policy_student.pth'))
-    #     torch.save(policy.state_dict(), os.path.join(log_path, 'policy_student.pth'))
-    #
+    def save_student_policy_fn(policy):
+        print('sava model at: ', os.path.join(log_path, 'policy_student.pth'))
+        torch.save(policy.state_dict(), os.path.join(log_path, 'policy_student.pth'))
+
     # def stop_fn(mean_rewards):
     #     if env.spec.reward_threshold:
     #         return mean_rewards >= env.spec.reward_threshold
@@ -167,9 +171,9 @@ def distill_dqn(args=get_args()):
     #     policy_student.set_eps(eps)
     #     logger.write('train/eps', env_step, eps)
     #
-    # def test_fn(epoch, env_step):
-    #     policy.set_eps(args.eps_test)
-    #     policy_student.set_eps(args.eps_test)
+    def test_fn(epoch, env_step):
+        teacher_policy.set_eps(args.eps_test)
+        student_policy.set_eps(args.eps_test)
 
 
 
@@ -206,33 +210,63 @@ def distill_dqn(args=get_args()):
 
     # really distill
     train_collector.collect(n_step=args.batch_size * args.training_num)
-    for epoch in range(args.args.epoch):
-        for step in range(args.step_per_epoch):
-            # 是否需要先去 collect 然后再 forward，直接与环境交互即，collect时候记录结果不好吗？ 去看看tianshou源码
-            batch, indice = train_collector.buffer.sample(n_step=args.batch_size * args.training_num)
+    gradient_step = 0
+    teacher_policy.eval()
+    teacher_policy.set_eps(args.eps_test)
+    episode_per_test = args.test_num
+    reward_metric = None
+    env_step = 0
+    best_student_epoch, best_student_reward, best_student_reward_std = -1, 0, 0
+    for epoch in range(args.epoch):
+        # 是否需要先去 collect 然后再 forward，直接与环境交互即，collect时候记录结果不好吗？ 去看看tianshou源码
+        with tqdm.tqdm(
+                total=args.step_per_epoch, desc=f"Epoch #{epoch}", **tqdm_config
+        ) as t:
+            while t.n < t.total:
+                result = train_collector.collect(n_step=args.step_per_collect)  # collect
+                env_step += int(result["n/st"])
+                t.update(result["n/st"])
+                for i in range(round(args.update_per_step * result["n/st"])):
+                    gradient_step += 1
+                    # compute loss
+                    batch, indice = train_collector.buffer.sample(args.batch_size)
 
-            teacher_policy.eval()
-            teacher_policy.set_eps(args.eps_test)
-            teacher = teacher_policy.forward(batch)
-            student = student_policy.forward(batch)
-            stds = torch.tensor([1e-6] * len(teacher.logits[0]), device=args.device, dtype=torch.float)
-            stds = torch.stack([stds for _ in range(len(teacher.logits))])
-            loss = get_kl([teacher.logits, stds], [student.logits, stds])
-            # TODO: add loss log：
-            student_policy.optim.zero_grad()
-            loss.backward()
-            student_policy.optim.step()
+                    student_res = student_policy.forward(batch)
+                    teacher_res = teacher_policy.forward(batch)
+                    student_mean = student_res.logits
+                    teacher_mean = teacher_res.logits
+                    stds = torch.tensor([1e-6] * len(teacher_mean[0]), device=args.device, dtype=torch.float)
+                    stds = torch.stack([stds for _ in range(len(teacher_mean))])
+                    loss = get_kl([teacher_mean, stds], [student_mean, stds])
+                    logger.log_update_data({'kl_loss:': loss}, gradient_step)
+                    # print('kl loss：', loss)
+                    # TODO: add loss log：
+                    student_policy.optim.zero_grad()
+                    loss.backward()
+                    student_policy.optim.step()
+                if t.n <= t.total:
+                    t.update()
+
+            # test student policy
+            test_time = time.perf_counter()
+            test_result = test_episode(teacher_policy, test_collector, test_fn, epoch,
+                                       episode_per_test, logger, env_step, reward_metric)
+            rew, rew_std = test_result["rew"], test_result["rew_std"]
+            print('test time:', time.perf_counter() - test_time,'rew:', rew)
+            #  最优teacher 处理？ 不需要
+
+            # test student_policy
+            test_time = time.perf_counter()
+            test_student_result = test_student_episode(student_policy, test_student_collector, test_fn, epoch,
+                                                       episode_per_test, logger, env_step, reward_metric)
+            rew_student, rew_std_student = test_student_result["rew"], test_student_result["rew_std"]
+            print('student test time:', time.perf_counter() - test_time, 'student-rew: ', rew_student)
+            if best_student_epoch < 0 or best_student_reward < rew_student:
+                best_student_epoch, best_student_reward, best_student_reward_std = epoch, rew_student, rew_std_student
+                if save_student_policy_fn:
+                    save_student_policy_fn(student_policy)
+
         # TODO: add student_policy test log
-
-    # def update_student():
-    #     update_times = 1
-    #     for _ in range(args.step_per_collect):
-    #         # 学习蒸馏算法去！
-    #         sample_size = 1
-    #         batch, indice = train_collector.buffer.sample(1)
-    #         # input = Batch(obs=Batch(obs=obs,mask=mask))
-
-    # eval student
     watch()
 
 
