@@ -11,11 +11,11 @@ import torch
 from torch.utils.tensorboard import SummaryWriter
 import tqdm
 
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))  # 使得命令行直接调用时，能够访问到我们自定义的tianshou
+
 from tianshou.trainer import test_episode
 from tianshou.trainer.utils import test_student_episode
 from utils import get_kl
-
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))  # 使得命令行直接调用时，能够访问到我们自定义的tianshou
 from tianshou.utils import BasicLogger, tqdm_config
 from tianshou.env import SubprocVectorEnv
 from tianshou.policy import DQNPolicy
