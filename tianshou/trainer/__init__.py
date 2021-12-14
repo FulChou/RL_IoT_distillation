@@ -9,4 +9,5 @@ __all__ = [
     "offline_trainer",
     "test_episode",
     "gather_info",
+    "offpolicy_trainer_2student",
 ]

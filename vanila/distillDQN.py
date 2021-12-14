@@ -239,8 +239,6 @@ def distill_dqn(args=get_args()):
                     stds = torch.stack([stds for _ in range(len(teacher_mean))])
                     loss = get_kl([teacher_mean, stds], [student_mean, stds])
                     logger.log_update_data({'kl_loss:': loss}, gradient_step)
-                    # print('kl loss：', loss)
-                    # TODO: add loss log：
                     student_policy.optim.zero_grad()
                     loss.backward()
                     student_policy.optim.step()

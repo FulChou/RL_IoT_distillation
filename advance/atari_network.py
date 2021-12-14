@@ -104,7 +104,6 @@ class student_DQN_net1(DQN):
             action_shape: Sequence[int],
             device: Union[str, int, torch.device] = "cpu",
             features_only: bool = False,
-            multiple_down: int = 1,
     ) -> None:
         super().__init__(c, h, w, action_shape, device, features_only)
         self.device = device
