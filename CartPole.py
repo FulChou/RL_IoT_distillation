@@ -2,7 +2,8 @@
 # code time：2021/7/26 下午8:05
 import gym
 import tianshou as ts
-import torch, numpy as np
+import torch
+import numpy as np
 from tianshou.data import Batch
 from torch import nn
 from utils import get_kl
