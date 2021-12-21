@@ -10,6 +10,9 @@ from torch.utils.tensorboard import SummaryWriter
 
 import torch
 import numpy as np
+
+from tianshou.trainer import offpolicy_trainer
+
 sys.path.append(os.path.join(os.path.dirname(__file__),'..')) # 使得命令行直接调用时，能够访问到我们自定义的tianshou
 from tianshou.trainer.offpolicy_v2 import offpolicy_trainer_v2
 from tianshou.utils import BasicLogger
@@ -80,7 +83,7 @@ def test_dqn(args=get_args()):
     teacher_net = TeacherNet(*args.state_shape,
               args.action_shape, args.device).to(args.device)
 
-    student_net = StudentNet(*args.state_shape,
+    student_net = TeacherNet(*args.state_shape,
             args.action_shape, args.device,).to(args.device)
 
     optim = torch.optim.Adam(teacher_net.parameters(), lr=args.lr)
@@ -108,12 +111,13 @@ def test_dqn(args=get_args()):
 
     # log
     t0 = datetime.datetime.now().strftime("%m%d_%H%M%S")
-    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}'+'update_collect888'
+    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}'+'update_collectbig'
     log_path = os.path.join(args.logdir, args.task, 'dqn', log_file)
     print('log_path', log_path)
     writer = SummaryWriter(log_path)
     writer.add_text("args", str(args))
     logger = BasicLogger(writer)
+    kl_step = 0
 
     def save_fn(policy):
         print('sava model at: ', os.path.join(log_path, 'policy.pth'))
@@ -149,8 +153,8 @@ def test_dqn(args=get_args()):
     # watch agent's performance
     def watch():
         print("Setup test envs ...")
-        policy.eval()
-        policy.set_eps(args.eps_test)
+        policy_student.eval()
+        policy_student.set_eps(args.eps_test)
         test_envs.seed(args.seed)
         if args.save_buffer_name:
             print(f"Generate buffer with size {args.buffer_size}")
@@ -158,7 +162,7 @@ def test_dqn(args=get_args()):
                 args.buffer_size, buffer_num=len(test_envs),
                 ignore_obs_next=True, save_only_last_obs=True,
                 stack_num=args.frames_stack)
-            collector = Collector(policy, test_envs, buffer,
+            collector = Collector(policy_student, test_envs, buffer,
                                   exploration_noise=True)
             result = collector.collect(n_step=args.buffer_size)
             print(f"Save buffer into {args.save_buffer_name}")
@@ -176,25 +180,31 @@ def test_dqn(args=get_args()):
         watch()
         exit(0)
 
-    def update_student(best_teacher_policy=None, sample_size=1, logger=None, step=0, is_update_student=True):
-        batch, indice = train_collector.buffer.sample(args.batch_size)
-        if best_teacher_policy:
-            teacher = best_teacher_policy.forward(batch)
-        else:
-            teacher = policy.forward(batch)
-        student = policy_student.forward(batch)
-        stds = torch.tensor([1e-6] * len(teacher.logits[0]), device=args.device, dtype=torch.float)
-        stds = torch.stack([stds for _ in range(len(teacher.logits))])
-        loss = get_kl([teacher.logits, stds], [student.logits, stds])
-        policy_student.optim.zero_grad()
-        loss.backward()
-        policy_student.optim.step()
+    def update_student(best_teacher_policy=None, sample_size=1, logger=logger, step=0, is_update_student=True):
+        nonlocal kl_step
+        pre_kl_loss , dis_loss = -1, 10
+        while dis_loss < .1:
+            batch, indice = train_collector.buffer.sample(args.batch_size)
+            if best_teacher_policy:
+                teacher = best_teacher_policy.forward(batch)
+            else:
+                teacher = policy.forward(batch)
+            student = policy_student.forward(batch)
+            stds = torch.tensor([1e-6] * len(teacher.logits[0]), device=args.device, dtype=torch.float)
+            stds = torch.stack([stds for _ in range(len(teacher.logits))])
+            kl_loss = get_kl([teacher.logits, stds], [student.logits, stds])
+            logger.log_update_data({'kl_loss:': kl_loss}, kl_step)
+            kl_step += 1
+            dis_loss = abs(kl_loss - pre_kl_loss)
+            policy_student.optim.zero_grad()
+            kl_loss.backward()
+            policy_student.optim.step()
 
 
     # test train_collector and start filling replay buffer
     train_collector.collect(n_step=args.batch_size * args.training_num)
     # trainer
-    result = offpolicy_trainer_v2(
+    result = offpolicy_trainer(
         policy, train_collector, test_collector, args.epoch,
         args.step_per_epoch, args.step_per_collect, args.test_num,
         args.batch_size, train_fn=train_fn,

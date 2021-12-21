@@ -28,10 +28,10 @@ class StudentNet(nn.Module):
         super().__init__()
         self.device = device
         self.model = nn.Sequential(
-            nn.Linear(np.prod(state_shape), 8), nn.ReLU(inplace=True),
-            nn.Linear(8, 6), nn.ReLU(inplace=True),
-            nn.Linear(6, 8), nn.ReLU(inplace=True),
-            nn.Linear(8, np.prod(action_shape)),
+            nn.Linear(np.prod(state_shape), 32), nn.ReLU(inplace=True),
+            nn.Linear(32, 16), nn.ReLU(inplace=True),
+            nn.Linear(16, 32), nn.ReLU(inplace=True),
+            nn.Linear(32, np.prod(action_shape)),
         )
 
     def forward(self, obs, state=None, info={}):
