@@ -204,7 +204,7 @@ def offpolicy_trainer_v2(
             print(f"Epoch #{epoch}: test_reward: {rew:.6f} ± {rew_std:.6f}, test_student_reward: {rew_student:.6f} ± {rew_std_student:.6f},"
                   f" best_reward: {best_reward:.6f} ± {best_reward_std:.6f} in #{best_epoch}"
                   f" best_student_reward: {best_student_reward:.6f} ± {best_student_reward_std:.6f} in #{best_student_epoch}")
-        if stop_fn and stop_fn(best_reward):
+        if stop_fn and stop_fn(best_student_reward):
             break
     return gather_info(start_time, train_collector, test_collector,
                        best_reward, best_reward_std)
