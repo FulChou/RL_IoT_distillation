@@ -82,7 +82,7 @@ def test_dqn(args=get_args()):
     teacher_net = TeacherNet(*args.state_shape,
               args.action_shape, args.device).to(args.device)
 
-    student_net = TeacherNet(*args.state_shape,
+    student_net = StudentNet(*args.state_shape,
             args.action_shape, args.device,).to(args.device)
 
     optim = torch.optim.Adam(teacher_net.parameters(), lr=args.lr)
@@ -110,7 +110,7 @@ def test_dqn(args=get_args()):
 
     # log
     t0 = datetime.datetime.now().strftime("%m%d_%H%M%S")
-    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}'+'update_collectbig'
+    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}'+'update_collect321632'
     log_path = os.path.join(args.logdir, args.task, 'dqn', log_file)
     print('log_path', log_path)
     writer = SummaryWriter(log_path)

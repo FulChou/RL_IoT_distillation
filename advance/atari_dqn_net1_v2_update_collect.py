@@ -25,7 +25,7 @@ from atari_wrapper import wrap_deepmind
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--task', type=str, default='EnduroNoFrameskip-v4')
+    parser.add_argument('--task', type=str, default='MsPacmanNoFrameskip-v4')
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--eps-test', type=float, default=0.005)
     parser.add_argument('--eps-train', type=float, default=1.)
@@ -197,13 +197,6 @@ def test_dqn(args=get_args()):
         policy_student.optim.zero_grad()
         loss.backward()
         policy_student.optim.step()
-
-        # total = args.step_per_epoch
-        # env_step = 0
-        # while env_step < total:
-        #     result = train_collector.collect(n_step=args.step_per_collect)  # collect
-        #     env_step += int(result["n/st"])
-        #     for i in range(round(args.update_per_step * result["n/st"])):
 
 # EnduroNoFrameskip-v4
     # def update_student(best_teacher_policy=None, update_times=1, sample_size=1, logger=None, step=0, is_update_student=True):
