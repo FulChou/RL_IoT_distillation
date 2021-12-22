@@ -110,7 +110,7 @@ def test_dqn(args=get_args()):
 
     # log
     t0 = datetime.datetime.now().strftime("%m%d_%H%M%S")
-    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}'+'update_collect321632'
+    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}'+'update_collect26 2 17'
     log_path = os.path.join(args.logdir, args.task, 'dqn', log_file)
     print('log_path', log_path)
     writer = SummaryWriter(log_path)
@@ -217,5 +217,8 @@ def test_dqn(args=get_args()):
 
 if __name__ == '__main__':
     test_dqn(get_args())
-
-
+'''
+4 26 2 17 2 比pops原文还要少25个参数，成功！
+Epoch #7: test_reward: 190.360000 ± 19.798242, test_student_reward: 196.640000 ± 12.857309, 
+best_reward: 193.550000 ± 16.988452 in #1 best_student_reward: 196.640000 ± 12.857309 in #7
+'''
