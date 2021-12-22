@@ -20,8 +20,7 @@ from utils import get_kl, get_mykl
 from tianshou.env import SubprocVectorEnv
 from tianshou.policy import DQNPolicy
 from tianshou.data import Collector, VectorReplayBuffer
-from linearNet import TeacherNet, StudentNet
-
+from linearNet import TeacherNet, StudentNet, TeacherNet_lunar
 
 
 def get_args():
@@ -38,10 +37,10 @@ def get_args():
     parser.add_argument('--target-update-freq', type=int, default=500)
     parser.add_argument('--epoch', type=int, default=100)
     parser.add_argument('--step-per-epoch', type=int, default=100000)
-    parser.add_argument('--step-per-collect', type=int, default=10)
+    parser.add_argument('--step-per-collect', type=int, default=16)
     parser.add_argument('--update-per-step', type=float, default=0.1)
     parser.add_argument('--batch-size', type=int, default=32)
-    parser.add_argument('--training-num', type=int, default=10)
+    parser.add_argument('--training-num', type=int, default=16)
     parser.add_argument('--test-num', type=int, default=100)
     parser.add_argument('--logdir', type=str, default='log')
     parser.add_argument('--net-num', type=str, default='net0')
@@ -49,7 +48,7 @@ def get_args():
     parser.add_argument(
         '--device', type=str,
         default='cuda' if torch.cuda.is_available() else 'cpu')
-    parser.add_argument('--frames-stack', type=int, default=4)
+    # parser.add_argument('--frames-stack', type=int, default=4)
     parser.add_argument('--resume-path', type=str, default=None)
     parser.add_argument('--watch', default=False, action='store_true',
                         help='watch the play of pre-trained policy only')
@@ -79,10 +78,10 @@ def test_dqn(args=get_args()):
     test_envs.seed(args.seed)
 
     # define model
-    teacher_net = TeacherNet(*args.state_shape,
+    teacher_net = TeacherNet_lunar(*args.state_shape,
               args.action_shape, args.device).to(args.device)
 
-    student_net = StudentNet(*args.state_shape,
+    student_net = TeacherNet_lunar(*args.state_shape,
             args.action_shape, args.device,).to(args.device)
 
     optim = torch.optim.Adam(teacher_net.parameters(), lr=args.lr)
@@ -100,9 +99,8 @@ def test_dqn(args=get_args()):
     # replay buffer: `save_last_obs` and `stack_num` can be removed together
     # when you have enough RAM
 
-    buffer = VectorReplayBuffer(
-        args.buffer_size, buffer_num=len(train_envs), ignore_obs_next=True,
-        save_only_last_obs=True, stack_num=args.frames_stack)
+    buffer = VectorReplayBuffer(   # TODO：注意对carpole是否有影响？buffer的细节！
+        args.buffer_size, buffer_num=len(train_envs),)
     # collector
     train_collector = Collector(policy_student, train_envs, buffer, exploration_noise=True)
     test_collector = Collector(policy, test_envs, exploration_noise=True)
@@ -110,7 +108,7 @@ def test_dqn(args=get_args()):
 
     # log
     t0 = datetime.datetime.now().strftime("%m%d_%H%M%S")
-    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}'+'update_collect26 2 17'
+    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}'+'update_collectbig'
     log_path = os.path.join(args.logdir, args.task, 'dqn', log_file)
     print('log_path', log_path)
     writer = SummaryWriter(log_path)
@@ -218,7 +216,5 @@ def test_dqn(args=get_args()):
 if __name__ == '__main__':
     test_dqn(get_args())
 '''
-4 26 2 17 2 比pops原文还要少25个参数，成功！
-Epoch #7: test_reward: 190.360000 ± 19.798242, test_student_reward: 196.640000 ± 12.857309, 
-best_reward: 193.550000 ± 16.988452 in #1 best_student_reward: 196.640000 ± 12.857309 in #7
+
 '''

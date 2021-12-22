@@ -1,3 +1,4 @@
+import datetime
 import os
 import gym
 import torch
@@ -82,8 +83,12 @@ def test_dqn(args=get_args()):
     # policy.set_eps(1)
     train_collector.collect(n_step=args.batch_size * args.training_num)
     # log
-    log_path = os.path.join(args.logdir, args.task, 'dqn')
+    t0 = datetime.datetime.now().strftime("%m%d_%H%M%S")
+    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}'+'ts'
+    log_path = os.path.join(args.logdir, args.task, 'dqn', log_file)
+    print('log_path', log_path)
     writer = SummaryWriter(log_path)
+    writer.add_text("args", str(args))
     logger = BasicLogger(writer)
 
     def save_fn(policy):
