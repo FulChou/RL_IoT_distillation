@@ -11,12 +11,12 @@ from torch.utils.tensorboard import SummaryWriter
 import torch
 import numpy as np
 
-from tianshou.trainer import offpolicy_trainer
 
 sys.path.append(os.path.join(os.path.dirname(__file__),'..')) # 使得命令行直接调用时，能够访问到我们自定义的tianshou
+from tianshou.trainer import offpolicy_trainer
 from tianshou.trainer.offpolicy_v2 import offpolicy_trainer_v2
 from tianshou.utils import BasicLogger
-from utils import get_kl
+from utils import get_kl, get_mykl
 from tianshou.env import SubprocVectorEnv
 from tianshou.policy import DQNPolicy
 from tianshou.data import Collector, VectorReplayBuffer
@@ -60,7 +60,6 @@ def get_env(args):
     return gym.make(args.task)
 
 def test_dqn(args=get_args()):
-
     env = get_env(args)
     print('reward best', env.spec.reward_threshold)
     args.state_shape = env.observation_space.shape or env.observation_space.n
@@ -182,29 +181,28 @@ def test_dqn(args=get_args()):
 
     def update_student(best_teacher_policy=None, sample_size=1, logger=logger, step=0, is_update_student=True):
         nonlocal kl_step
-        pre_kl_loss , dis_loss = -1, 10
-        while dis_loss < .1:
-            batch, indice = train_collector.buffer.sample(args.batch_size)
-            if best_teacher_policy:
-                teacher = best_teacher_policy.forward(batch)
-            else:
-                teacher = policy.forward(batch)
-            student = policy_student.forward(batch)
-            stds = torch.tensor([1e-6] * len(teacher.logits[0]), device=args.device, dtype=torch.float)
-            stds = torch.stack([stds for _ in range(len(teacher.logits))])
-            kl_loss = get_kl([teacher.logits, stds], [student.logits, stds])
-            logger.log_update_data({'kl_loss:': kl_loss}, kl_step)
-            kl_step += 1
-            dis_loss = abs(kl_loss - pre_kl_loss)
-            policy_student.optim.zero_grad()
-            kl_loss.backward()
-            policy_student.optim.step()
+        batch, indice = train_collector.buffer.sample(args.batch_size)
+        if best_teacher_policy:
+            teacher = best_teacher_policy.forward(batch)
+        else:
+            teacher = policy.forward(batch)
+        student = policy_student.forward(batch)
+        stds = torch.tensor([1e-6] * len(teacher.logits[0]), device=args.device, dtype=torch.float)
+        stds = torch.stack([stds for _ in range(len(teacher.logits))])
+        kl_loss = get_mykl([teacher.logits, stds], [student.logits, stds])
+        # print('kl_loss:', kl_loss)
+        logger.log_update_data({'kl_loss:': kl_loss}, kl_step)
+        policy_student.optim.zero_grad()
+        kl_loss.backward()
+        policy_student.optim.step()
+        kl_step += 1
+
 
 
     # test train_collector and start filling replay buffer
     train_collector.collect(n_step=args.batch_size * args.training_num)
     # trainer
-    result = offpolicy_trainer(
+    result = offpolicy_trainer_v2(
         policy, train_collector, test_collector, args.epoch,
         args.step_per_epoch, args.step_per_collect, args.test_num,
         args.batch_size, train_fn=train_fn,
@@ -218,6 +216,6 @@ def test_dqn(args=get_args()):
 
 
 if __name__ == '__main__':
-    test_dqn(get_args()) ## 压缩512呗没问题
+    test_dqn(get_args())
 
 

@@ -12,7 +12,7 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(__file__),'..')) # 使得命令行直接调用时，能够访问到我们自定义的tianshou
 # print(sys.path)
 from tianshou.trainer.offpolicy_v2 import offpolicy_trainer_v2
-from utils import get_kl
+from utils import get_kl, get_mykl
 from tianshou.policy import DQNPolicy
 from tianshou.utils import BasicLogger
 from tianshou.env import SubprocVectorEnv
@@ -193,7 +193,7 @@ def test_dqn(args=get_args()):
         student = policy_student.forward(batch)
         stds = torch.tensor([1e-6] * len(teacher.logits[0]), device=args.device, dtype=torch.float)
         stds = torch.stack([stds for _ in range(len(teacher.logits))])
-        loss = get_kl([teacher.logits, stds], [student.logits, stds])
+        loss = get_mykl([teacher.logits, stds], [student.logits, stds])
         policy_student.optim.zero_grad()
         loss.backward()
         policy_student.optim.step()

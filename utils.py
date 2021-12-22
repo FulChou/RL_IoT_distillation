@@ -2,6 +2,7 @@
 
 import torch
 import math
+from torch.nn.functional import softmax
 from torch.distributions import Normal
 from torch.distributions.kl import kl_divergence
 
@@ -21,6 +22,17 @@ def get_kl(teacher_dist_info, student_dist_info):
     pi_new = Normal(student_dist_info[0], scale=student_dist_info[1])
     kl = torch.mean(kl_divergence(pi, pi_new))
     return kl
+
+def get_mykl(teacher_dist_info, student_dist_info):
+    tau = 0.01
+    eps = 0.00001
+    p = softmax(teacher_dist_info[0]/ tau, dim=1) + eps
+    q = softmax(student_dist_info[0], dim=1) + eps
+    return torch.sum(p * torch.log(p / q))
+    # Normal(loc=teacher_dist_info[0], scale=teacher_dist_info[1])  # means， std
+    # pi_new = Normal(student_dist_info[0], scale=student_dist_info[1])
+    # kl = torch.mean(kl_divergence(pi, pi_new))
+    # return kl
 
 def get_wasserstein(teacher_dist_info, student_dist_info):
     means_t, stds_t = teacher_dist_info
