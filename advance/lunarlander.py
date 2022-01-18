@@ -20,7 +20,7 @@ from utils import get_kl, get_mykl
 from tianshou.env import SubprocVectorEnv
 from tianshou.policy import DQNPolicy
 from tianshou.data import Collector, VectorReplayBuffer
-from linearNet import TeacherNet, StudentNet, TeacherNet_lunar
+from linearNet import TeacherNet, StudentNet, TeacherNet_lunar, StudentNet_lunar
 
 
 def get_args():
@@ -81,7 +81,7 @@ def test_dqn(args=get_args()):
     teacher_net = TeacherNet_lunar(*args.state_shape,
               args.action_shape, args.device).to(args.device)
 
-    student_net = TeacherNet_lunar(*args.state_shape,
+    student_net = StudentNet_lunar(*args.state_shape,
             args.action_shape, args.device,).to(args.device)
 
     optim = torch.optim.Adam(teacher_net.parameters(), lr=args.lr)
@@ -108,7 +108,7 @@ def test_dqn(args=get_args()):
 
     # log
     t0 = datetime.datetime.now().strftime("%m%d_%H%M%S")
-    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}'+'update_collectbig'
+    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}'+'uc4 19 4'
     log_path = os.path.join(args.logdir, args.task, 'dqn', log_file)
     print('log_path', log_path)
     writer = SummaryWriter(log_path)
@@ -216,5 +216,8 @@ def test_dqn(args=get_args()):
 if __name__ == '__main__':
     test_dqn(get_args())
 '''
-
+凌晨02：46
+big,能成功，但是太慢了，可能还要花时间采用ts给的代码实现一遍，提高收敛速度！
+晚上跑一下，收缩的。收缩不行，？算了，直接改ts的 lunarlander吧！
+4 19 4的可以成功哦~
 '''

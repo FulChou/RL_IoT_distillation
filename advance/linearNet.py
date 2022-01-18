@@ -59,16 +59,17 @@ class StudentNet(nn.Module):
         logits = self.model(obs.view(batch, -1))
         return logits, state
 
-    class StudentNet_lunar(nn.Module):
-        def __init__(self, state_shape, action_shape, device):
-            super().__init__()
-            self.device = device
-            self.model = nn.Sequential(
-                nn.Linear(np.prod(state_shape), 2), nn.ReLU(inplace=True),
-                nn.Linear(2, 19), nn.ReLU(inplace=True),
-                nn.Linear(19, 2), nn.ReLU(inplace=True),
-                nn.Linear(2, np.prod(action_shape)),
-            )
+
+class StudentNet_lunar(nn.Module):
+    def __init__(self, state_shape, action_shape, device):
+        super().__init__()
+        self.device = device
+        self.model = nn.Sequential(
+            nn.Linear(np.prod(state_shape), 4), nn.ReLU(inplace=True),
+            nn.Linear(4, 19), nn.ReLU(inplace=True),
+            nn.Linear(19, 4), nn.ReLU(inplace=True),
+            nn.Linear(4, np.prod(action_shape)),
+        )
 
     def forward(self, obs, state=None, info={}):
         if not isinstance(obs, torch.Tensor):

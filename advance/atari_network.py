@@ -109,8 +109,8 @@ class student_DQN_net1(DQN):
         self.device = device
         self.net = nn.Sequential(
             nn.Conv2d(c, 16, kernel_size=8, stride=4), nn.ReLU(inplace=True),
-            nn.Conv2d(16, 32, kernel_size=4, stride=2), nn.ReLU(inplace=True),
-            nn.Conv2d(32, 32, kernel_size=3, stride=1), nn.ReLU(inplace=True),
+            nn.Conv2d(16, 18, kernel_size=4, stride=2), nn.ReLU(inplace=True),
+            nn.Conv2d(18, 16, kernel_size=3, stride=1), nn.ReLU(inplace=True),
             nn.Flatten())
         with torch.no_grad():
             self.output_dim = np.prod(

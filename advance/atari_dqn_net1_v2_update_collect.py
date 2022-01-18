@@ -116,7 +116,7 @@ def test_dqn(args=get_args()):
 
     # log
     t0 = datetime.datetime.now().strftime("%m%d_%H%M%S")
-    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}'+'update_collect'
+    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}'+'update_collect4—16-18-16-256-9'
     log_path = os.path.join(args.logdir, args.task, 'dqn', log_file)
     print('log_path', log_path)
     writer = SummaryWriter(log_path)
@@ -198,7 +198,6 @@ def test_dqn(args=get_args()):
         loss.backward()
         policy_student.optim.step()
 
-# EnduroNoFrameskip-v4
     # def update_student(best_teacher_policy=None, update_times=1, sample_size=1, logger=None, step=0, is_update_student=True):
     #     if is_update_student:
     #         begin_time = time.perf_counter()
