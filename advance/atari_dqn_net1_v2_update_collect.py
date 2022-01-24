@@ -115,8 +115,8 @@ def test_dqn(args=get_args()):
     test_student_collector = Collector(policy_student, test_envs, exploration_noise=True)
 
     # log
-    t0 = datetime.datetime.now().strftime("%m%d_%H%M%S")
-    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}'+'update_collect4—16-18-16-256-9'
+    t0 = datetime.datetime.now().strftime("%y%m%d_%H%M%S")
+    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}'+'while_bound4-16-16-16-128-2000'
     log_path = os.path.join(args.logdir, args.task, 'dqn', log_file)
     print('log_path', log_path)
     writer = SummaryWriter(log_path)
@@ -136,6 +136,8 @@ def test_dqn(args=get_args()):
             return mean_rewards >= env.spec.reward_threshold
         elif 'Pong' in args.task:
             return mean_rewards >= 20
+        elif 'MsPacman' in args.task:
+            return mean_rewards >= 2000
         else:
             return False
 
@@ -185,55 +187,24 @@ def test_dqn(args=get_args()):
         exit(0)
 
     def update_student(best_teacher_policy=None, sample_size=1, logger=None, step=0, is_update_student=True):
-        batch, indice = train_collector.buffer.sample(args.batch_size)
-        if best_teacher_policy:
-            teacher = best_teacher_policy.forward(batch)
-        else:
-            teacher = policy.forward(batch)
-        student = policy_student.forward(batch)
-        stds = torch.tensor([1e-6] * len(teacher.logits[0]), device=args.device, dtype=torch.float)
-        stds = torch.stack([stds for _ in range(len(teacher.logits))])
-        loss = get_mykl([teacher.logits, stds], [student.logits, stds])
-        policy_student.optim.zero_grad()
-        loss.backward()
-        policy_student.optim.step()
-
-    # def update_student(best_teacher_policy=None, update_times=1, sample_size=1, logger=None, step=0, is_update_student=True):
-    #     if is_update_student:
-    #         begin_time = time.perf_counter()
-    #         for _ in range(update_times):
-    #             # sample_size = 1
-    #             batch, indice = train_collector.buffer.sample(sample_size)
-    #             # only need to update the student policy
-    #             if best_teacher_policy: # adapt best teacher to distillation
-    #                 # best_teacher_policy.eval() use the best policy !! 这个要改一下吧
-    #                 # best_teacher_policy = torch.load(os.path.join(log_path, 'policy.pth'), map_location=args.device)
-    #                 teacher = best_teacher_policy.forward(batch)
-    #             else:
-    #                 teacher = policy.forward(batch)
-    #             student = policy_student.forward(batch)
-    #             teacher_mus, teacher_sigmas = teacher.logits[0], teacher.logits[1]
-    #             student_mus, student_sigmas = student.logits[0], student.logits[1]
-    #
-    #             # stds = torch.tensor([1e-6] * len(teacher.logits[0]), device=args.device, dtype=torch.float)
-    #             # stds = torch.stack([stds for _ in range(len(teacher.logits))])  # 自己伪造的 stds
-    #             loss = sum([get_kl([teacher_mu, teacher_sigma], [student_mu, student_sigma])
-    #                         for teacher_mu in teacher_mus
-    #                         for teacher_sigma in teacher_sigmas
-    #                         for student_mu in student_mus
-    #                         for student_sigma in student_sigmas])
-    #             if logger:
-    #                 # print('loss/kl_loss')
-    #                 logger.log_kl_loss({'loss/kl_loss': loss}, step)
-    #
-    #             # loss = get_kl([teacher.logits, stds], [student.logits, stds])
-    #             policy_student.actor_optim.zero_grad()
-    #             loss.backward()
-    #             policy_student.actor_optim.step()
-    #         if update_times > 1:
-    #             print('update student time: ', time.perf_counter() - begin_time)
-    #     else:
-    #         print('bad teacher do not update student')
+        loss_bound = 1
+        pre_loss = 0
+        while loss_bound >= 0.0001:
+            # policy_student.load_state_dict(policy.state_dict())
+            batch, indice = train_collector.buffer.sample(args.batch_size)
+            if best_teacher_policy:
+                teacher = best_teacher_policy.forward(batch)
+            else:
+                teacher = policy.forward(batch)
+            student = policy_student.forward(batch)
+            stds = torch.tensor([1e-6] * len(teacher.logits[0]), device=args.device, dtype=torch.float)
+            stds = torch.stack([stds for _ in range(len(teacher.logits))])
+            loss = get_mykl([teacher.logits, stds], [student.logits, stds])
+            loss_bound, pre_loss = loss - pre_loss, loss
+            logger.log_update_data({'kl_loss:': loss}, step)
+            policy_student.optim.zero_grad()
+            loss.backward()
+            policy_student.optim.step()
 
 
     # test train_collector and start filling replay buffer
