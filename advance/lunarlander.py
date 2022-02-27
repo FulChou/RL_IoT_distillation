@@ -223,4 +223,22 @@ if __name__ == '__main__':
 big,能成功，但是太慢了，可能还要花时间采用ts给的代码实现一遍，提高收敛速度！
 晚上跑一下，收缩的。收缩不行，？算了，直接改ts的 lunarlander吧！
 4 19 4的可以成功哦~
+
+Epoch #11: test_reward: 12.864500 ± 74.216961, test_student_reward: 203.508970 ±
+ 80.255 80.255178 in #11 117.662017 ± 88.230490 in #8 best_student_reward: 203.508970 ±
+{'best_result': '117.66 ± 88.23',
+ 'best_reward': 117.66201679914023,
+ 'duration': '2010.95s',
+ 'test_episode': 1200,
+ 'test_speed': '5515.80 step/s',
+ 'test_step': 661589,
+ 'test_time': '119.94s',
+ 'train_episode': 5095,
+ 'train_speed': '581.70 step/s',
+ 'train_step': 1100000,
+ 'train_time/collector': '335.08s',
+ 'train_time/model': '1555.93s'}
+Setup test envs ...
+Testing agent ...
+Mean reward (over 100 episodes): -4.910823249940677
 '''

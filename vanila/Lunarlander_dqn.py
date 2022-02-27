@@ -5,19 +5,17 @@ import pprint
 import argparse
 import numpy as np
 import sys
+import gym
 from torch.utils.tensorboard import SummaryWriter
 
 from linearNet import TeacherNet_lunar
 
-sys.path.append(os.path.join(os.path.dirname(__file__),'..'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from tianshou.policy import DQNPolicy
 from tianshou.utils import BasicLogger
 from tianshou.env import SubprocVectorEnv
 from tianshou.trainer import offpolicy_trainer
 from tianshou.data import Collector, VectorReplayBuffer
-
-from atari_network import DQN
-from atari_wrapper import wrap_deepmind
 
 
 def get_args():
@@ -34,17 +32,17 @@ def get_args():
     parser.add_argument('--target-update-freq', type=int, default=500)
     parser.add_argument('--epoch', type=int, default=100)
     parser.add_argument('--step-per-epoch', type=int, default=100000)
-    parser.add_argument('--step-per-collect', type=int, default=10)
+    parser.add_argument('--step-per-collect', type=int, default=16)
     parser.add_argument('--update-per-step', type=float, default=0.1)
     parser.add_argument('--batch-size', type=int, default=32)
-    parser.add_argument('--training-num', type=int, default=10)
-    parser.add_argument('--test-num', type=int, default=10)
+    parser.add_argument('--training-num', type=int, default=16)
+    parser.add_argument('--test-num', type=int, default=100)
     parser.add_argument('--logdir', type=str, default='log')
     parser.add_argument('--render', type=float, default=0.)
     parser.add_argument(
         '--device', type=str,
         default='cuda' if torch.cuda.is_available() else 'cpu')
-    parser.add_argument('--frames-stack', type=int, default=4)
+    # parser.add_argument('--frames-stack', type=int, default=4)
     parser.add_argument('--resume-path', type=str, default=None)
     parser.add_argument('--watch', default=False, action='store_true',
                         help='watch the play of pre-trained policy only')
@@ -52,26 +50,21 @@ def get_args():
     return parser.parse_args()
 
 
-def make_atari_env(args):
-    return wrap_deepmind(args.task, frame_stack=args.frames_stack)
-
-
-def make_atari_env_watch(args):
-    return wrap_deepmind(args.task, frame_stack=args.frames_stack,
-                         episode_life=False, clip_rewards=False)
+def get_env(args):
+    return gym.make(args.task)
 
 
 def test_dqn(args=get_args()):
-    env = make_atari_env(args)
+    env = get_env(args)
     args.state_shape = env.observation_space.shape or env.observation_space.n
     args.action_shape = env.action_space.shape or env.action_space.n
     # should be N_FRAMES x H x W
     print("Observations shape:", args.state_shape)
     print("Actions shape:", args.action_shape)
     # make environments
-    train_envs = SubprocVectorEnv([lambda: make_atari_env(args)
+    train_envs = SubprocVectorEnv([lambda: get_env(args)
                                    for _ in range(args.training_num)])
-    test_envs = SubprocVectorEnv([lambda: make_atari_env_watch(args)
+    test_envs = SubprocVectorEnv([lambda: get_env(args)
                                   for _ in range(args.test_num)])
     # seed
     np.random.seed(args.seed)
@@ -93,8 +86,8 @@ def test_dqn(args=get_args()):
     # replay buffer: `save_last_obs` and `stack_num` can be removed together
     # when you have enough RAM
     buffer = VectorReplayBuffer(
-        args.buffer_size, buffer_num=len(train_envs), ignore_obs_next=True,
-        save_only_last_obs=True, stack_num=args.frames_stack)
+        args.buffer_size,
+        buffer_num=len(train_envs),)  # ignore_obs_next=True, save_only_last_obs=True, stack_num=args.frames_stack
     # collector
     train_collector = Collector(policy, train_envs, buffer, exploration_noise=True)
     test_collector = Collector(policy, test_envs, exploration_noise=True)
@@ -122,7 +115,7 @@ def test_dqn(args=get_args()):
         # nature DQN setting, linear decay in the first 1M steps
         if env_step <= 1e6:
             eps = args.eps_train - env_step / 1e6 * \
-                (args.eps_train - args.eps_train_final)
+                  (args.eps_train - args.eps_train_final)
         else:
             eps = args.eps_train_final
         policy.set_eps(eps)
@@ -177,3 +170,21 @@ def test_dqn(args=get_args()):
 
 if __name__ == '__main__':
     test_dqn(get_args())
+'''Epoch #15: test_reward: 222.901581 ± 57.596580, test_student_reward: 0.000000 ± 0.000000, best_reward: 222.901581 ± 57.596580 in #15 best_student_reward: -inf ±
+0.000000 in #0
+{'best_result': '222.90 ± 57.60',
+ 'best_reward': 222.90158127563677,
+ 'duration': '1683.92s',
+ 'test_episode': 1600,
+ 'test_speed': '5358.29 step/s',
+ 'test_step': 1084142,
+ 'test_time': '202.33s',
+ 'train_episode': 5853,
+ 'train_speed': '1012.43 step/s',
+ 'train_step': 1500000,
+ 'train_time/collector': '475.88s',
+ 'train_time/model': '1005.71s'}
+Setup test envs ...
+Testing agent ...
+Mean reward (over 100 episodes): 221.60803441486735
+'''

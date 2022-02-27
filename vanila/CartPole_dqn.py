@@ -5,6 +5,7 @@ import pprint
 import argparse
 import numpy as np
 import sys
+import gym
 from torch.utils.tensorboard import SummaryWriter
 
 from linearNet import TeacherNet
@@ -16,8 +17,6 @@ from tianshou.env import SubprocVectorEnv
 from tianshou.trainer import offpolicy_trainer
 from tianshou.data import Collector, VectorReplayBuffer
 
-from atari_network import DQN
-from atari_wrapper import wrap_deepmind
 
 
 def get_args():
@@ -52,26 +51,21 @@ def get_args():
     return parser.parse_args()
 
 
-def make_atari_env(args):
-    return wrap_deepmind(args.task, frame_stack=args.frames_stack)
-
-
-def make_atari_env_watch(args):
-    return wrap_deepmind(args.task, frame_stack=args.frames_stack,
-                         episode_life=False, clip_rewards=False)
+def get_env(args):
+    return gym.make(args.task)
 
 
 def test_dqn(args=get_args()):
-    env = make_atari_env(args)
+    env = get_env(args)
     args.state_shape = env.observation_space.shape or env.observation_space.n
     args.action_shape = env.action_space.shape or env.action_space.n
     # should be N_FRAMES x H x W
     print("Observations shape:", args.state_shape)
     print("Actions shape:", args.action_shape)
     # make environments
-    train_envs = SubprocVectorEnv([lambda: make_atari_env(args)
+    train_envs = SubprocVectorEnv([lambda: get_env(args)
                                    for _ in range(args.training_num)])
-    test_envs = SubprocVectorEnv([lambda: make_atari_env_watch(args)
+    test_envs = SubprocVectorEnv([lambda: get_env(args)
                                   for _ in range(args.test_num)])
     # seed
     np.random.seed(args.seed)
@@ -80,7 +74,7 @@ def test_dqn(args=get_args()):
     test_envs.seed(args.seed)
     # define model
     net = TeacherNet(*args.state_shape,
-                                                                         args.action_shape, args.device).to(args.device)
+                     args.action_shape, args.device).to(args.device)
 
     optim = torch.optim.Adam(net.parameters(), lr=args.lr)
     # define policy

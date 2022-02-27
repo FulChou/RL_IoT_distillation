@@ -110,7 +110,7 @@ def test_dqn(args=get_args()):
 
     # log
     t0 = datetime.datetime.now().strftime("%m%d_%H%M%S")
-    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}'+'update_collect26 2 17'
+    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}'+'26 2 17'
     log_path = os.path.join(args.logdir, args.task, 'dqn', log_file)
     print('log_path', log_path)
     writer = SummaryWriter(log_path)
@@ -225,4 +225,21 @@ if __name__ == '__main__':
 4 26 2 17 2 比pops原文还要少25个参数，成功！  (224
 Epoch #7: test_reward: 190.360000 ± 19.798242, test_student_reward: 196.640000 ± 12.857309, 
 best_reward: 193.550000 ± 16.988452 in #1 best_student_reward: 196.640000 ± 12.857309 in #7
+
+Epoch #5: test_reward: 198.300000 ± 5.100000, test_student_reward: 0.000000 ± 0.000000, best_reward: 198.300000 ± 5.100000 in #5 best_student_reward: -inf ± 0.000000 in #0
+{'best_result': '198.30 ± 5.10',
+ 'best_reward': 198.3,
+ 'duration': '411.66s',
+ 'test_episode': 60,
+ 'test_speed': '5528.65 step/s',
+ 'test_step': 8075,
+ 'test_time': '1.46s',
+ 'train_episode': 13596,
+ 'train_speed': '1218.92 step/s',
+ 'train_step': 500000,
+ 'train_time/collector': '91.87s',
+ 'train_time/model': '318.33s'}
+Setup test envs ...
+Testing agent ...
+Mean reward (over 10 episodes): 200.0
 '''
