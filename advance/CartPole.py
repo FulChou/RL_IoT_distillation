@@ -181,21 +181,25 @@ def test_dqn(args=get_args()):
 
     def update_student(best_teacher_policy=None, sample_size=1, logger=logger, step=0, is_update_student=True):
         nonlocal kl_step
-        batch, indice = train_collector.buffer.sample(args.batch_size)
-        if best_teacher_policy:
-            teacher = best_teacher_policy.forward(batch)
-        else:
-            teacher = policy.forward(batch)
-        student = policy_student.forward(batch)
-        stds = torch.tensor([1e-6] * len(teacher.logits[0]), device=args.device, dtype=torch.float)
-        stds = torch.stack([stds for _ in range(len(teacher.logits))])
-        kl_loss = get_mykl([teacher.logits, stds], [student.logits, stds])
-        # print('kl_loss:', kl_loss)
-        logger.log_update_data({'kl_loss:': kl_loss}, kl_step)
-        policy_student.optim.zero_grad()
-        kl_loss.backward()
-        policy_student.optim.step()
-        kl_step += 1
+        loss_bound = 1
+        pre_loss = 0
+        while loss_bound >= 0.0001:
+            batch, indice = train_collector.buffer.sample(args.batch_size)
+            if best_teacher_policy:
+                teacher = best_teacher_policy.forward(batch)
+            else:
+                teacher = policy.forward(batch)
+            student = policy_student.forward(batch)
+            stds = torch.tensor([1e-6] * len(teacher.logits[0]), device=args.device, dtype=torch.float)
+            stds = torch.stack([stds for _ in range(len(teacher.logits))])
+            kl_loss = get_mykl([teacher.logits, stds], [student.logits, stds])
+            loss_bound, pre_loss = kl_loss - pre_loss, kl_loss
+            logger.log_update_data({'kl_loss:': kl_loss}, kl_step)
+            policy_student.optim.zero_grad()
+            kl_loss.backward()
+            policy_student.optim.step()
+            kl_step += 1
+
 
 
 
@@ -218,7 +222,7 @@ def test_dqn(args=get_args()):
 if __name__ == '__main__':
     test_dqn(get_args())
 '''
-4 26 2 17 2 比pops原文还要少25个参数，成功！
+4 26 2 17 2 比pops原文还要少25个参数，成功！  (224
 Epoch #7: test_reward: 190.360000 ± 19.798242, test_student_reward: 196.640000 ± 12.857309, 
 best_reward: 193.550000 ± 16.988452 in #1 best_student_reward: 196.640000 ± 12.857309 in #7
 '''

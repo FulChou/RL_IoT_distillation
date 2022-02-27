@@ -118,8 +118,8 @@ class student_DQN_net1(DQN):
         if not features_only:
             self.net = nn.Sequential(
                 self.net,
-                nn.Linear(self.output_dim, 128), nn.ReLU(inplace=True),
-                nn.Linear(128, np.prod(action_shape)))
+                nn.Linear(self.output_dim, 64), nn.ReLU(inplace=True),
+                nn.Linear(64, np.prod(action_shape)))
             self.output_dim = np.prod(action_shape)
 
     def forward(
