@@ -119,11 +119,14 @@ def test_dqn(args=get_args()):
     kl_step = 0
 
     def save_fn(policy):
-        print('sava model at: ', os.path.join(log_path, 'policy.pth'))
+        print('sava teacher model at: ', os.path.join(log_path, 'policy.pth'))
         torch.save(policy.state_dict(), os.path.join(log_path, 'policy.pth'))
+        torch.save(policy, os.path.join(log_path, 'policy.pkl'))
+        best_policy = torch.load(os.path.join(log_path, 'policy.pkl'), map_location=args.device)
+        return best_policy
 
     def save_student_policy_fn(policy):
-        print('sava model at: ', os.path.join(log_path, 'policy_student.pth'))
+        print('sava student model at: ', os.path.join(log_path, 'policy_student.pth'))
         torch.save(policy.state_dict(), os.path.join(log_path, 'policy_student.pth'))
 
     def stop_fn(mean_rewards):
@@ -186,6 +189,7 @@ def test_dqn(args=get_args()):
         while loss_bound >= 0.0001:
             batch, indice = train_collector.buffer.sample(args.batch_size)
             if best_teacher_policy:
+                print(1)
                 teacher = best_teacher_policy.forward(batch)
             else:
                 teacher = policy.forward(batch)
