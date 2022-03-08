@@ -4,6 +4,7 @@ from torch import nn
 import torch
 import numpy as np
 
+
 class TeacherNet(nn.Module):
     def __init__(self, state_shape, action_shape, device):
         super().__init__()
@@ -46,10 +47,10 @@ class StudentNet(nn.Module):
         super().__init__()
         self.device = device
         self.model = nn.Sequential(
-            nn.Linear(np.prod(state_shape), 26), nn.ReLU(inplace=True),
-            nn.Linear(26, 2), nn.ReLU(inplace=True),
-            nn.Linear(2, 17), nn.ReLU(inplace=True),
-            nn.Linear(17, np.prod(action_shape)),
+            nn.Linear(np.prod(state_shape), 16), nn.ReLU(inplace=True),
+            nn.Linear(16, 2), nn.ReLU(inplace=True),
+            nn.Linear(2, 16), nn.ReLU(inplace=True),
+            nn.Linear(16, np.prod(action_shape)),
         )
 
     def forward(self, obs, state=None, info={}):

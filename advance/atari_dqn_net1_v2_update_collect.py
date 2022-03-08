@@ -116,7 +116,7 @@ def test_dqn(args=get_args()):
 
     # log
     t0 = datetime.datetime.now().strftime("%y%m%d_%H%M%S")
-    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}'+'while_bound4-16-16-16-64-2000'
+    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}'+'while_bound4-16-32-32-256'
     log_path = os.path.join(args.logdir, args.task, 'dqn', log_file)
     print('log_path', log_path)
     writer = SummaryWriter(log_path)

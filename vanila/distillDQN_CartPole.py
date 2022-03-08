@@ -5,7 +5,7 @@ import datetime
 import os
 import sys
 import time
-
+import torchsummary as summary
 import gym
 import numpy as np
 import torch
@@ -90,6 +90,7 @@ def get_student_policy(args):
     :return: policy
     """
     student_net = StudentNet(*args.state_shape, args.action_shape, args.device).to(args.device)
+    summary.summary(student_net, args.state_shape) # compute model size
     student_optim = torch.optim.Adam(student_net.parameters(), lr=args.lr)
     policy_student = DQNPolicy(student_net, student_optim, args.gamma, args.n_step,
                                target_update_freq=args.target_update_freq)  # test  target_update_freq = 0
@@ -134,7 +135,7 @@ def distill_dqn(args=get_args()):
 
     # log
     t0 = datetime.datetime.now().strftime("%m%d_%H%M%S")
-    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}'
+    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}-16-2-16'
     log_path = os.path.join(args.logdir, 'distll', args.task, 'dqn', log_file)
     print('log_path', log_path)
     writer = SummaryWriter(log_path)

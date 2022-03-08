@@ -89,7 +89,7 @@ def get_student_policy(args):
     :param args:
     :return: policy
     """
-    student_net = StudentNet_lunar(*args.state_shape, args.action_shape, args.device).to(args.device)
+    student_net = TeacherNet_lunar(*args.state_shape, args.action_shape, args.device).to(args.device)
     student_optim = torch.optim.Adam(student_net.parameters(), lr=args.lr)
     policy_student = DQNPolicy(student_net, student_optim, args.gamma, args.n_step,
                                target_update_freq=args.target_update_freq)  # test  target_update_freq = 0
