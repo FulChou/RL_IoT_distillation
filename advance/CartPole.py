@@ -110,7 +110,7 @@ def test_dqn(args=get_args()):
 
     # log
     t0 = datetime.datetime.now().strftime("%m%d_%H%M%S")
-    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}'+'16_2_16_196_best'
+    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}'+'26_2_17_271_best'
     log_path = os.path.join(args.logdir, args.task, 'dqn', log_file)
     print('log_path', log_path)
     writer = SummaryWriter(log_path)
@@ -189,7 +189,6 @@ def test_dqn(args=get_args()):
         while loss_bound >= 0.0001:
             batch, indice = train_collector.buffer.sample(args.batch_size)
             if best_teacher_policy:
-                print(1)
                 teacher = best_teacher_policy.forward(batch)
             else:
                 teacher = policy.forward(batch)
