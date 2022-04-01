@@ -21,7 +21,7 @@ from tianshou.trainer import offpolicy_trainer
 from tianshou.data import Collector, VectorReplayBuffer
 from atari_network import DQN, student_DQN_net1
 from atari_wrapper import wrap_deepmind
-from main_keyframes_L21.to_matlab import call_matlab
+from to_matlab import call_matlab
 
 
 def get_args():
@@ -37,7 +37,7 @@ def get_args():
     parser.add_argument('--n-step', type=int, default=3)
     parser.add_argument('--target-update-freq', type=int, default=500)
     parser.add_argument('--epoch', type=int, default=100)
-    parser.add_argument('--step-per-epoch', type=int, default=100000)
+    parser.add_argument('--step-per-epoch', type=int, default=1000)
     parser.add_argument('--step-per-collect', type=int, default=10)
     parser.add_argument('--update-per-step', type=float, default=0.1)
     parser.add_argument('--batch-size', type=int, default=32)
@@ -117,7 +117,7 @@ def test_dqn(args=get_args()):
 
     # log
     t0 = datetime.datetime.now().strftime("%y%m%d_%H%M%S")
-    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}'+'while_bound4-16-32-32-256'
+    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}'+'debug4-16-32-32-256'
     log_path = os.path.join(args.logdir, args.task, 'dqn', log_file)
     print('log_path', log_path)
     writer = SummaryWriter(log_path)
@@ -194,6 +194,7 @@ def test_dqn(args=get_args()):
             # policy_student.load_state_dict(policy.state_dict())
             batch, indice = train_collector.buffer.sample(args.batch_size)
             batch1, indice1 = train_collector.buffer.sample(1000)
+            # np.savetxt('data.txt',batch1.obs)
             call_matlab(batch1)
 
             if best_teacher_policy:

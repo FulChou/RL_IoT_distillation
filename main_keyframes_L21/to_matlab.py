@@ -18,8 +18,8 @@ from tianshou.data import Batch
 def call_matlab(data: Batch=None):
     # print(data)
     # input = np.hstack((data['obs'], data['act']))
-    input = data['obs']
-    print(input.shape())
+    input = data.obs
+    print(type(input.shape))
     eng = matlab.engine.start_matlab()
     tf = eng.test(matlab.double(input.tolist()), 950)
     print(tf)

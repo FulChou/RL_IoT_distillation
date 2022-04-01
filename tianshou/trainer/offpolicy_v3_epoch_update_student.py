@@ -155,7 +155,7 @@ def offpolicy_v3_epoch_update_student(
                             policy.train()
                 for i in range(round(update_per_step * result["n/st"])):
                     gradient_step += 1
-                    losses = policy.update(batch_size, train_collector.buffer)
+                    losses = policy.update(batch_size, train_collector.buffer) # update batch size : 32
                     for k in losses.keys():
                         stat[k].add(losses[k])
                         losses[k] = stat[k].get()
