@@ -24,8 +24,8 @@ def call_matlab(data:Batch=None):
     else:
         raise Exception('please input a Batch obj')
     input = matlab.double(input.tolist())
-    eng = matlab.engine.start_matlab(input)
-    idxs = eng.test()
+    eng = matlab.engine.start_matlab()
+    idxs = eng.test(input)
     # print(idxs, type(idxs))
     idxs = np.asarray(idxs)
     # print(idxs, type(idxs))

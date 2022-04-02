@@ -1,5 +1,5 @@
 function res = test(B)
-% B = permute(A, [4 3 2 1])
+B = permute(B, [4 3 2 1]);
 % save('input.mat','B')
 % load('input.mat', 'B');
 
@@ -7,10 +7,8 @@ shape = size(B);
 
 % reshape erorr
 % data = reshape(B, [shape(1),  shape(2), shape(3) * shape(4)]);
-
-
 % add path
-% clear; 清除 变量了
+% clear; 清除变量了
 list = {'funcs'};
 % HOMEDATA = './GT/';
 for i = 1:length(list)
@@ -52,8 +50,8 @@ saveas(gcf,'0.jpg')
 %param.Data=normrows(Data);
 %Y=Ys;
 
-n=Y;
-YY=n; % why？
+% n=Y;
+YY = Y; % why？
 
 % divp=0.05;
 % minx=0;
@@ -130,7 +128,7 @@ end
 % TT = title(:,:,1);
 figure(1);
 clf
-image(title)
+image(title);
 saveas(gcf,'1.jpg')
 res = valid_ind;
 end

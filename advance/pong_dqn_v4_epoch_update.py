@@ -194,9 +194,8 @@ def test_dqn(args=get_args()):
             # policy_student.load_state_dict(policy.state_dict())
             batch, indice = train_collector.buffer.sample(args.batch_size)
             batch1, indice1 = train_collector.buffer.sample(1000)
-            # np.savetxt('data.txt',batch1.obs)
-            call_matlab(batch1)
-
+            idxs = call_matlab(batch1)
+            print(idxs)
             if best_teacher_policy:
                 teacher = best_teacher_policy.forward(batch)
             else:

@@ -111,7 +111,7 @@ def test_dqn(args=get_args()):
 
     # log
     t0 = datetime.datetime.now().strftime("%m%d_%H%M%S")
-    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}'+'26_2_17_271_best'
+    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}'+'26_2_17_271_debug'
     log_path = os.path.join(args.logdir, args.task, 'dqn', log_file)
     print('log_path', log_path)
     writer = SummaryWriter(log_path)
@@ -193,8 +193,8 @@ def test_dqn(args=get_args()):
         while loss_bound >= 0.0001:
             batch, indice = train_collector.buffer.sample(args.batch_size)
             batch1, indice1 = train_collector.buffer.sample(1000)  #  for main-keyframe，思路，我们先试一下从buffer中拿1000条经验去进行关键经验提取，然后利用关键经验提取看看会是怎么样的情况吧！
-            idxs = call_matlab(batch1)
-            print(idxs)
+            # idxs = call_matlab(batch1)
+            # print(idxs)
             if best_teacher_policy:
                 teacher = best_teacher_policy.forward(batch)
             else:
