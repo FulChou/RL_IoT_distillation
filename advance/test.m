@@ -1,41 +1,54 @@
-function res = main_keyframes_L21(A, num_frames)
-B = permute(A, [4 3 2 1]);
-save('input.mat','B')
+function res = test(B)
+% B = permute(A, [4 3 2 1])
+% save('input.mat','B')
+% load('input.mat', 'B');
 
-fprintf('num_frames: %.2f',num_frames)
-size(B)
-clear;
-list={'funcs'};
-HOMEDATA='./GT/';
-for i=1:length(list)
+shape = size(B);
+
+% reshape erorr
+% data = reshape(B, [shape(1),  shape(2), shape(3) * shape(4)]);
+
+
+% add path
+% clear; 清除 变量了
+list = {'funcs'};
+% HOMEDATA = './GT/';
+for i = 1:length(list)
     addpath(genpath(list{i}),'-begin');
 end
 tic % tic表示计时的开始，toc表示计时的结束。
-v = VideoReader('Jumps.mp4');
-num_frames = fix(v.Duration) * fix(v.FrameRate) - 2;
 
+num_frames =  shape(4);
 fprintf('num_frames: %.2f',num_frames)
-%num_frames = round(v.Duration * v.FrameRate);
-%num_frames = min(round(v.Duration * v.FrameRate), max_frames);
-
-X = zeros(v.Height, v.Width, 3, num_frames, 'uint8');
+H = shape(1);
+W = shape(2);
+k = shape(3);
+X = zeros(H, W * k,  num_frames, 'uint8');
 
 vec = @(x) x(:); % vec is function
 % 若信号是矩阵，则把x矩阵按列拆分后纵向排列成一个大的列向量；
 % 若信号是行向量，则相当于转置；若信号是列向量则不变。
 scale = 1 / 2;
-h = v.Height * scale;
-w = v.Width * scale;
+h = H * scale;
+w = W * scale;
 
-Y = zeros(h * w, num_frames);
+Y = zeros(h * w * k, num_frames);
 f = 1;
-while f <= num_frames && hasFrame(v)
-    X(:, :, :, f) = readFrame(v);
-    Y(:, f) = vec(imresize(rgb2gray(im2double(X(:, :, :, f))), scale));
+while f <= num_frames
+    for i = 1: k
+        X(:, (1:W) + (i - 1) * W, f) = B(:, :, i, f);
+    end
+    Y(:, f) = vec(imresize(im2double(X(:, :, f)), scale));
     f = f + 1;
 end
-% read X(视频帧, Y（视频灰度化，缩放后，纵向读变成列向量
 
+l1 = B(:, :, 1, 1);
+l2 = X(:, :, 1);
+figure(99)
+image(X(:, :, 1))
+saveas(gcf,'0.jpg')
+
+% read X(视频帧, Y（视频灰度化，缩放后，纵向读变成列向量
 %param.Data=normrows(Data);
 %Y=Ys;
 
@@ -82,14 +95,14 @@ for idx = 1:length(lambda)
                 Zk = Z;
             end
     end
-
+    t = size(Z);
     error = norm(XX - XX * Z) / norm(XX);
     sInd = findRep(Z, 0.99);
     ind = rmRep(sInd, XX);
-    [f_measure] = summe_evaluateSummary(Z, 'Jumps', HOMEDATA);
-
+    % [f_measure] = summe_evaluateSummary(Z, 'Jumps', HOMEDATA);
+    f_measure = 0.1;
     fprintf('lambda: %.2e, f_measure: %.3f, error: %.2e, cvgiter: %.f\n',lambda_idx, f_measure, error, iter)
-    record.f_measure(idx) = f_measure;
+    record.f_measure(idx) = idx;
     record.error(idx) = error;
     record.ind{idx} = ind;
     record.Z{idx} = Z;
@@ -110,15 +123,14 @@ valid_ind = sort(record.ind{pos}); %(sum(Y(:, ind)) > 0);
 I = length(valid_ind);
 H = h/scale;
 W = w/scale;
-title = zeros(H, W * I, 3, class(X));
+title = zeros(H, W * k * I, class(X));
 for i = 1: I
-    title(:, (1:W) + (i - 1) * W, :) = X(:, :, :, valid_ind(i));
+    title(:, (1: W*k) + (i - 1) * W*k) = X(:, :, valid_ind(i));
 end
 % TT = title(:,:,1);
 figure(1);
 clf
 image(title)
 saveas(gcf,'1.jpg')
-
-res = 'yes'
+res = valid_ind;
 end

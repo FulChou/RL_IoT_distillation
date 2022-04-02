@@ -193,7 +193,8 @@ def test_dqn(args=get_args()):
         while loss_bound >= 0.0001:
             batch, indice = train_collector.buffer.sample(args.batch_size)
             batch1, indice1 = train_collector.buffer.sample(1000)  #  for main-keyframe，思路，我们先试一下从buffer中拿1000条经验去进行关键经验提取，然后利用关键经验提取看看会是怎么样的情况吧！
-            call_matlab(batch1)
+            idxs = call_matlab(batch1)
+            print(idxs)
             if best_teacher_policy:
                 teacher = best_teacher_policy.forward(batch)
             else:
