@@ -192,10 +192,29 @@ def test_dqn(args=get_args()):
         pre_loss = 0
         while loss_bound >= 0.0001:
             # policy_student.load_state_dict(policy.state_dict())
+            if len(train_collector.buffer) >= 1e3:
+                batch_all, indice_all = train_collector.buffer.sample(0)
+                temp_buffer = VectorReplayBuffer(
+                    args.buffer_size, buffer_num=len(train_envs), ignore_obs_next=True,
+                    save_only_last_obs=True, stack_num=args.frames_stack)
+                # TODO: 减少matlab关于每个状态的代码，
+                idxs = call_matlab(batch_all)  # 只需要取四个中的一个就行，反正都是一样的！ 重要知道到了
+                # print(idxs)
+                idxs = list(map(int, idxs))
+                idxs = [i-1 for i in idxs]
+                print('keys idxs', idxs)
+                key_batch = batch_all[idxs]
+                key_indice = indice_all[idxs]
+
+                buffer_id = [int(i // 1e4) for i in key_indice]
+                temp_buffer.add(key_batch, buffer_id)  # this add (2,2)
+                # old_buffer = train_collector.buffer
+                train_collector.buffer = temp_buffer
+            # print()
+            batch_all, indice_all = train_collector.buffer.sample(0)  # 复制了多个多余的。。。
+            # sample 32 from [1e4, 2e4]
             batch, indice = train_collector.buffer.sample(args.batch_size)
-            batch1, indice1 = train_collector.buffer.sample(1000)
-            idxs = call_matlab(batch1)
-            print(idxs)
+            # print(batch[[1,2]])
             if best_teacher_policy:
                 teacher = best_teacher_policy.forward(batch)
             else:

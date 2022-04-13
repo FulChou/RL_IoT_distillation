@@ -122,6 +122,8 @@ def offpolicy_v3_epoch_update_student(
             while t.n < t.total:
                 if train_fn:
                     train_fn(epoch, env_step)
+                if update_student_fn:  # every epoch update student maybe couldn't need so many update
+                    update_student_fn(best_teacher_policy=best_teacher_policy, logger=logger, step=env_step)
                 result = train_collector.collect(n_step=step_per_collect)
                 if result["n/ep"] > 0 and reward_metric:
                     result["rews"] = reward_metric(result["rews"])
@@ -197,8 +199,7 @@ def offpolicy_v3_epoch_update_student(
                     save_student_policy_fn(policy_student)
 
         logger.save_data(epoch, env_step, gradient_step, save_checkpoint_fn)
-        if update_student_fn:  # every epoch update student maybe couldn't need so many update
-            update_student_fn(best_teacher_policy=best_teacher_policy, logger=logger, step=env_step)
+
         if verbose:
             print(f"Epoch #{epoch}: test_reward: {rew:.6f} ± {rew_std:.6f}, test_student_reward: {rew_student:.6f} ± {rew_std_student:.6f},"
                   f" best_reward: {best_reward:.6f} ± {best_reward_std:.6f} in #{best_epoch}"

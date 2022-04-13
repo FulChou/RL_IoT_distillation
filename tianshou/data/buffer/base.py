@@ -342,6 +342,7 @@ class ReplayBuffer:
             rew=self.rew[indice],
             done=self.done[indice],
             obs_next=obs_next,
-            info=self.get(indice, "info", Batch()),
+            # info=self.get(indice, "info", Batch()),
+            info=self.info[indice],
             policy=self.get(indice, "policy", Batch()),
         )

@@ -27,7 +27,7 @@ def call_matlab(data:Batch=None):
     eng = matlab.engine.start_matlab()
     idxs = eng.test(input)
     # print(idxs, type(idxs))
-    idxs = np.asarray(idxs)
+    idxs = np.asarray(idxs).tolist()[0]
     # print(idxs, type(idxs))
     return idxs
 
