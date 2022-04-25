@@ -20,15 +20,13 @@ def call_matlab(data:Batch=None):
     # input = np.hstack((data['obs'], data['act']))
 
     if hasattr(data, 'obs'):
-        input = data.obs
+        input = data.obs[:, -1]
     else:
         raise Exception('please input a Batch obj')
     input = matlab.double(input.tolist())
     eng = matlab.engine.start_matlab()
     idxs = eng.test(input)
-    # print(idxs, type(idxs))
     idxs = np.asarray(idxs).tolist()[0]
-    # print(idxs, type(idxs))
     return idxs
 
 if __name__ == '__main__':

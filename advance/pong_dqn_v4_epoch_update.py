@@ -1,5 +1,7 @@
 import os
 import datetime
+import time
+
 import torch
 import pprint
 import argparse
@@ -37,7 +39,7 @@ def get_args():
     parser.add_argument('--n-step', type=int, default=3)
     parser.add_argument('--target-update-freq', type=int, default=500)
     parser.add_argument('--epoch', type=int, default=100)
-    parser.add_argument('--step-per-epoch', type=int, default=1000)
+    parser.add_argument('--step-per-epoch', type=int, default=100000)
     parser.add_argument('--step-per-collect', type=int, default=10)
     parser.add_argument('--update-per-step', type=float, default=0.1)
     parser.add_argument('--batch-size', type=int, default=32)
@@ -108,6 +110,10 @@ def test_dqn(args=get_args()):
     # replay buffer: `save_last_obs` and `stack_num` can be removed together
     # when you have enough RAM
     buffer = VectorReplayBuffer(
+        args.buffer_size, buffer_num=len(train_envs), ignore_obs_next=True,
+        save_only_last_obs=True, stack_num=args.frames_stack)
+
+    key_buffer = VectorReplayBuffer(
         args.buffer_size, buffer_num=len(train_envs), ignore_obs_next=True,
         save_only_last_obs=True, stack_num=args.frames_stack)
     # collector
@@ -190,31 +196,26 @@ def test_dqn(args=get_args()):
     def update_student(best_teacher_policy=None, sample_size=1, logger=None, step=0, is_update_student=True):
         loss_bound = 1
         pre_loss = 0
-        while loss_bound >= 0.0001:
+        while loss_bound >= 0.001:
             # policy_student.load_state_dict(policy.state_dict())
-            if len(train_collector.buffer) >= 1e3:
+            # print('len', len(train_collector.buffer))
+            if len(train_collector.buffer) >= 1e2:
                 batch_all, indice_all = train_collector.buffer.sample(0)
-                temp_buffer = VectorReplayBuffer(
-                    args.buffer_size, buffer_num=len(train_envs), ignore_obs_next=True,
-                    save_only_last_obs=True, stack_num=args.frames_stack)
-                # TODO: 减少matlab关于每个状态的代码，
+                # pre_key_loss = policy.conmpute_loss(0, train_collector.buffer)
+                t = time.perf_counter()
                 idxs = call_matlab(batch_all)  # 只需要取四个中的一个就行，反正都是一样的！ 重要知道到了
-                # print(idxs)
+                print('call matlab time: ', time.perf_counter() - t)
+
                 idxs = list(map(int, idxs))
-                idxs = [i-1 for i in idxs]
-                print('keys idxs', idxs)
+                idxs = [i - 1 for i in idxs]
+
                 key_batch = batch_all[idxs]
                 key_indice = indice_all[idxs]
-
                 buffer_id = [int(i // 1e4) for i in key_indice]
-                temp_buffer.add(key_batch, buffer_id)  # this add (2,2)
-                # old_buffer = train_collector.buffer
-                train_collector.buffer = temp_buffer
-            # print()
-            batch_all, indice_all = train_collector.buffer.sample(0)  # 复制了多个多余的。。。
-            # sample 32 from [1e4, 2e4]
-            batch, indice = train_collector.buffer.sample(args.batch_size)
-            # print(batch[[1,2]])
+                key_buffer.add(key_batch, buffer_id)  # this add (2,2)
+                train_collector.buffer.reset()
+            # batch_all, indice_all = train_collector.buffer.sample(0)  # 复制了多个多余的。。。
+            batch, indice = key_buffer.sample(args.batch_size)
             if best_teacher_policy:
                 teacher = best_teacher_policy.forward(batch)
             else:
@@ -231,14 +232,14 @@ def test_dqn(args=get_args()):
 
 
     # test train_collector and start filling replay buffer
-    train_collector.collect(n_step=args.batch_size * args.training_num)
+    train_collector.collect(n_step=100 * args.training_num)  # 100 is for 1000 key_frame
     # trainer
     result = offpolicy_v3_epoch_update_student(
         policy, train_collector, test_collector, args.epoch,
         args.step_per_epoch, args.step_per_collect, args.test_num,
         args.batch_size, train_fn=train_fn,
         update_student_fn=update_student, test_student_collector=test_student_collector, policy_student=policy_student,
-        save_student_policy_fn=save_student_policy_fn,
+        save_student_policy_fn=save_student_policy_fn, key_buffer=key_buffer,
         test_fn=test_fn, stop_fn=stop_fn, save_fn=save_fn, logger=logger,
         update_per_step=args.update_per_step, test_in_train=False)
 

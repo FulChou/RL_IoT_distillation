@@ -25,6 +25,7 @@ def offpolicy_v3_epoch_update_student(
         policy_student: BasePolicy = None,
         train_fn: Optional[Callable[[int, int], None]] = None,
         update_student_fn: Optional[Callable[[int, int], None]] = None,
+        key_buffer = None,
         test_fn: Optional[Callable[[int, Optional[int]], None]] = None,
         stop_fn: Optional[Callable[[float], bool]] = None,
         save_fn: Optional[Callable[[BasePolicy], None]] = None,
@@ -123,7 +124,7 @@ def offpolicy_v3_epoch_update_student(
                 if train_fn:
                     train_fn(epoch, env_step)
                 if update_student_fn:  # every epoch update student maybe couldn't need so many update
-                    update_student_fn(best_teacher_policy=best_teacher_policy, logger=logger, step=env_step)
+                    update_student_fn(logger=logger, step=env_step)
                 result = train_collector.collect(n_step=step_per_collect)
                 if result["n/ep"] > 0 and reward_metric:
                     result["rews"] = reward_metric(result["rews"])
@@ -157,7 +158,7 @@ def offpolicy_v3_epoch_update_student(
                             policy.train()
                 for i in range(round(update_per_step * result["n/st"])):
                     gradient_step += 1
-                    losses = policy.update(batch_size, train_collector.buffer) # update batch size : 32
+                    losses = policy.update(batch_size, key_buffer)  # update batch size : 32
                     for k in losses.keys():
                         stat[k].add(losses[k])
                         losses[k] = stat[k].get()
