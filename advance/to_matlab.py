@@ -15,17 +15,14 @@ from scipy import io, integrate, linalg, signal
 # X = np.zeros((num_frames, W, H, 3), np.uint8)
 from tianshou.data import Batch
 
-def call_matlab(data:Batch=None):
-    # print(data)
-    # input = np.hstack((data['obs'], data['act']))
-
+def call_matlab(data:Batch=None, log_path=''):
     if hasattr(data, 'obs'):
         input = data.obs[:, -1]
     else:
         raise Exception('please input a Batch obj')
     input = matlab.double(input.tolist())
     eng = matlab.engine.start_matlab()
-    idxs = eng.test(input)
+    idxs = eng.test(input, log_path)
     idxs = np.asarray(idxs).tolist()[0]
     return idxs
 

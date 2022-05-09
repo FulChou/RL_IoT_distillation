@@ -163,7 +163,7 @@ class DQNPolicy(BasePolicy):
         self.optim.zero_grad()
         weight = batch.pop("weight", 1.0)
         q = self(batch).logits
-        q = q[np.arange(len(q)), batch.act]
+        q = q[np.arange(len(q)), batch.act]  # argmaxQ
         r = to_torch_as(batch.returns.flatten(), q)
         td = r - q
         loss = (td.pow(2) * weight).mean()
@@ -172,6 +172,23 @@ class DQNPolicy(BasePolicy):
         self.optim.step()
         self._iter += 1
         return {"loss": loss.item()}
+
+    def compute_loss_not_learn(self, batch: Batch, **kwargs: Any) -> Dict[str, float]:
+        if self._target and self._iter % self._freq == 0:
+            self.sync_weight()
+        self.optim.zero_grad()
+        weight = batch.pop("weight", 1.0)
+        q = self(batch).logits
+        q = q[np.arange(len(q)), batch.act]
+        r = to_torch_as(batch.returns.flatten(), q)
+        td = r - q
+        loss = (td.pow(2) * weight)
+            #.mean()
+        batch.weight = td  # prio-buffer
+        # loss.backward()
+        # self.optim.step()
+        # self._iter += 1
+        return {"loss": loss.tolist()}
 
     def exploration_noise(
         self, act: Union[np.ndarray, Batch], batch: Batch

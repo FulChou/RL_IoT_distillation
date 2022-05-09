@@ -7,7 +7,6 @@ import pprint
 import argparse
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
-import matplotlib.pyplot as plt
 import sys
 
 
@@ -38,13 +37,13 @@ def get_args():
     parser.add_argument('--lr', type=float, default=0.0001)
     parser.add_argument('--gamma', type=float, default=0.99)
     parser.add_argument('--n-step', type=int, default=3)
-    parser.add_argument('--target-update-freq', type=int, default=500)  # orinal 500
+    parser.add_argument('--target-update-freq', type=int, default=500)
     parser.add_argument('--epoch', type=int, default=100)
     parser.add_argument('--step-per-epoch', type=int, default=100000)
     parser.add_argument('--step-per-collect', type=int, default=10)
     parser.add_argument('--update-per-step', type=float, default=0.1)
     parser.add_argument('--batch-size', type=int, default=32)
-    parser.add_argument('--training-num', type=int, default=10)
+    parser.add_argument('--training-num', type=int, default=1)
     parser.add_argument('--test-num', type=int, default=100)
     parser.add_argument('--logdir', type=str, default='log')
     parser.add_argument('--net-num', type=str, default='net0')
@@ -93,7 +92,7 @@ def test_dqn(args=get_args()):
     net = DQN(*args.state_shape,
               args.action_shape, args.device).to(args.device)
 
-    student_net = DQN(*args.state_shape,
+    student_net = student_DQN_net1(*args.state_shape,
               args.action_shape, args.device,).to(args.device)
 
     optim = torch.optim.Adam(net.parameters(), lr=args.lr)
@@ -124,7 +123,7 @@ def test_dqn(args=get_args()):
 
     # log
     t0 = datetime.datetime.now().strftime("%y%m%d_%H%M%S")
-    log_file = f'seed_{args.seed}_{t0}-lr{args.lr}-{args.task.replace("-", "_")}'+'debug6-doublestate'
+    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}'+'debug4-16-32-32-256'
     log_path = os.path.join(args.logdir, args.task, 'dqn', log_file)
     print('log_path', log_path)
     writer = SummaryWriter(log_path)
@@ -193,48 +192,29 @@ def test_dqn(args=get_args()):
     if args.watch:
         watch()
         exit(0)
-    def draw_loss_distribution(name, pre_loss, key_loss):
-        plt.figure(figsize=(16, 12))
-        data = []
-        data.append(pre_loss)
-        data.append(key_loss)
-        plt.hist(data, bins=40, density=True, label=('pre_loss', 'key_loss'))
-        # plt.hist(pre_loss, bins=50, density=True)
-        # plt.hist(key_loss, bins=50, density=True)
-        my_x_ticks = np.arange(0, 3, 0.1)
-        plt.xticks(my_x_ticks)
-        plt.savefig(name)
-
 
     def update_student(best_teacher_policy=None, sample_size=1, logger=None, step=0, is_update_student=True):
         loss_bound = 1
         pre_loss = 0
-        while loss_bound >= 0.0001:
+        print('len of key_buffer', len(key_buffer))
+        while loss_bound >= 0.001:
             # policy_student.load_state_dict(policy.state_dict())
             # print('len', len(train_collector.buffer))
             if len(train_collector.buffer) >= 1e3:
-                # print('len of key_buffer', len(key_buffer))
                 batch_all, indice_all = train_collector.buffer.sample(0)
-                pre_key_loss = policy.conmpute_loss(0, train_collector.buffer)
+                # pre_key_loss = policy.conmpute_loss(0, train_collector.buffer)
                 t = time.perf_counter()
-                matlab_log_path = os.path.join(log_path, str(step))
-                os.makedirs(matlab_log_path)
-                idxs = call_matlab(batch_all, matlab_log_path)  # 只需要取四个中的一个就行，反正都是一样的！ 重要知道到了
+                idxs = call_matlab(batch_all)  # 只需要取四个中的一个就行，反正都是一样的！ 重要知道到了
                 print('call matlab time: ', time.perf_counter() - t)
+                # print('len of key', len(idxs))
                 idxs = list(map(int, idxs))
                 idxs = [i - 1 for i in idxs]
+
                 key_batch = batch_all[idxs]
                 key_indice = indice_all[idxs]
                 buffer_id = [int(i // 1e4) for i in key_indice]
-                temp_buffer = VectorReplayBuffer(
-                    args.buffer_size, buffer_num=len(train_envs), ignore_obs_next=True,
-                    save_only_last_obs=True, stack_num=args.frames_stack)
-
-                key_buffer.add(key_batch, buffer_id)
-                temp_buffer.add(key_batch, buffer_id)
-                key_loss = policy.conmpute_loss(0, temp_buffer)
-                draw_loss_distribution(os.path.join(matlab_log_path, str(len(idxs)) + 'loss_distribution.jpg'), pre_key_loss['loss'], key_loss['loss'])
-                train_collector.buffer.reset()
+                key_buffer.add(key_batch, buffer_id)  # this add (2,2)
+                train_collector.buffer = key_buffer
             # batch_all, indice_all = train_collector.buffer.sample(0)  # 复制了多个多余的。。。
             batch, indice = key_buffer.sample(args.batch_size)
             if best_teacher_policy:
@@ -253,7 +233,7 @@ def test_dqn(args=get_args()):
 
 
     # test train_collector and start filling replay buffer
-    train_collector.collect(n_step=100 * args.training_num)  # 100 is for 1000 key_frame
+    train_collector.collect(n_step=1000 * args.training_num)  # 100 is for 1000 key_frame
     # trainer
     result = offpolicy_v3_epoch_update_student(
         policy, train_collector, test_collector, args.epoch,

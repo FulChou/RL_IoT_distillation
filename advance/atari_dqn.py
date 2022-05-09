@@ -15,7 +15,7 @@ from tianshou.env import SubprocVectorEnv
 from tianshou.trainer import offpolicy_trainer
 from tianshou.data import Collector, VectorReplayBuffer
 
-from atari_network import DQN, student_DQN
+from atari_network import DQN, student_DQN, student_DQN_net1
 from atari_wrapper import wrap_deepmind
 
 
@@ -85,8 +85,8 @@ def test_dqn(args=get_args()):
     net = DQN(*args.state_shape,
               args.action_shape, args.device).to(args.device)
 
-    student_net = student_DQN(*args.state_shape,
-              args.action_shape, args.device, multiple_down=1).to(args.device)
+    student_net = student_DQN_net1(*args.state_shape,
+              args.action_shape, args.device).to(args.device)
 
     optim = torch.optim.Adam(net.parameters(), lr=args.lr)
     student_optim = torch.optim.Adam(student_net.parameters(), lr=args.lr)
