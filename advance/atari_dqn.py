@@ -7,7 +7,6 @@ import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__),'..')) # 使得命令行直接调用时，能够访问到我们自定义的tianshou
-# print(sys.path)
 from utils import get_kl
 from tianshou.policy import DQNPolicy
 from tianshou.utils import BasicLogger
@@ -37,9 +36,8 @@ def get_args():
     parser.add_argument('--update-per-step', type=float, default=0.1)
     parser.add_argument('--batch-size', type=int, default=32)
     parser.add_argument('--training-num', type=int, default=10)
-    parser.add_argument('--test-num', type=int, default=100)
+    parser.add_argument('--test-num', type=int, default=10)
     parser.add_argument('--logdir', type=str, default='log')
-    parser.add_argument('--net-num', type=str, default='net0')
     parser.add_argument('--render', type=float, default=0.)
     parser.add_argument(
         '--device', type=str,
@@ -63,8 +61,6 @@ def make_atari_env_watch(args):
 
 def test_dqn(args=get_args()):
     env = make_atari_env(args)
-    print('reward best', env.spec.reward_threshold)
-
     args.state_shape = env.observation_space.shape or env.observation_space.n
     args.action_shape = env.action_space.shape or env.action_space.n
     # should be N_FRAMES x H x W
@@ -80,22 +76,13 @@ def test_dqn(args=get_args()):
     torch.manual_seed(args.seed)
     train_envs.seed(args.seed)
     test_envs.seed(args.seed)
-
     # define model
     net = DQN(*args.state_shape,
               args.action_shape, args.device).to(args.device)
-
-    student_net = student_DQN_net1(*args.state_shape,
-              args.action_shape, args.device).to(args.device)
-
     optim = torch.optim.Adam(net.parameters(), lr=args.lr)
-    student_optim = torch.optim.Adam(student_net.parameters(), lr=args.lr)
     # define policy
     policy = DQNPolicy(net, optim, args.gamma, args.n_step,
                        target_update_freq=args.target_update_freq)
-    policy_student = DQNPolicy(student_net, student_optim, args.gamma, args.n_step,
-                       target_update_freq=args.target_update_freq)  # test  target_update_freq = 0
-
     # load a previous policy
     if args.resume_path:
         policy.load_state_dict(torch.load(args.resume_path, map_location=args.device))
@@ -106,25 +93,18 @@ def test_dqn(args=get_args()):
         args.buffer_size, buffer_num=len(train_envs), ignore_obs_next=True,
         save_only_last_obs=True, stack_num=args.frames_stack)
     # collector
-    train_collector = Collector(policy_student, train_envs, buffer, exploration_noise=True)
+    train_collector = Collector(policy, train_envs, buffer, exploration_noise=True)
     test_collector = Collector(policy, test_envs, exploration_noise=True)
-    test_student_collector = Collector(policy_student, test_envs, exploration_noise=True)
-
     # log
-    t0 = datetime.datetime.now().strftime("%m%d_%H%M%S")
-    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}'+args.net_num
+    t0 = datetime.datetime.now().strftime("%y%m%d_%H%M%S")
+    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}'
     log_path = os.path.join(args.logdir, args.task, 'dqn', log_file)
     writer = SummaryWriter(log_path)
     writer.add_text("args", str(args))
     logger = BasicLogger(writer)
 
     def save_fn(policy):
-        print('sava model at: ', os.path.join(log_path, 'policy.pth'))
         torch.save(policy.state_dict(), os.path.join(log_path, 'policy.pth'))
-
-    def save_student_policy_fn(policy):
-        print('sava model at: ', os.path.join(log_path, 'policy_student.pth'))
-        torch.save(policy.state_dict(), os.path.join(log_path, 'policy_student.pth'))
 
     def stop_fn(mean_rewards):
         if env.spec.reward_threshold:
@@ -142,12 +122,10 @@ def test_dqn(args=get_args()):
         else:
             eps = args.eps_train_final
         policy.set_eps(eps)
-        policy_student.set_eps(eps)
         logger.write('train/eps', env_step, eps)
 
     def test_fn(epoch, env_step):
         policy.set_eps(args.eps_test)
-        policy_student.set_eps(args.eps_test)
 
     # watch agent's performance
     def watch():
@@ -179,73 +157,14 @@ def test_dqn(args=get_args()):
         watch()
         exit(0)
 
-    def update_student(best_teacher_policy=None, sample_size=1, logger=None, step=0, is_update_student=True):
-        update_times = 5000
-        for _ in range(update_times):
-            # 学习蒸馏算法去！
-            sample_size = 32
-            batch, indice = train_collector.buffer.sample(sample_size)
-            # input = Batch(obs=Batch(obs=obs,mask=mask))
-            if best_teacher_policy:
-                teacher = best_teacher_policy.forward(batch)
-            else:
-                teacher = policy.forward(batch)
-            student = policy_student.forward(batch)
-            stds = torch.tensor([1e-6] * len(teacher.logits[0]), device=args.device, dtype=torch.float)
-            stds = torch.stack([stds for _ in range(len(teacher.logits))])
-            loss = get_kl([teacher.logits, stds], [student.logits, stds])
-            policy_student.optim.zero_grad()
-            loss.backward()
-            policy_student.optim.step()
-
-    # def update_student(best_teacher_policy=None, update_times=1, sample_size=1, logger=None, step=0, is_update_student=True):
-    #     if is_update_student:
-    #         begin_time = time.perf_counter()
-    #         for _ in range(update_times):
-    #             # sample_size = 1
-    #             batch, indice = train_collector.buffer.sample(sample_size)
-    #             # only need to update the student policy
-    #             if best_teacher_policy: # adapt best teacher to distillation
-    #                 # best_teacher_policy.eval() use the best policy !! 这个要改一下吧
-    #                 # best_teacher_policy = torch.load(os.path.join(log_path, 'policy.pth'), map_location=args.device)
-    #                 teacher = best_teacher_policy.forward(batch)
-    #             else:
-    #                 teacher = policy.forward(batch)
-    #             student = policy_student.forward(batch)
-    #             teacher_mus, teacher_sigmas = teacher.logits[0], teacher.logits[1]
-    #             student_mus, student_sigmas = student.logits[0], student.logits[1]
-    #
-    #             # stds = torch.tensor([1e-6] * len(teacher.logits[0]), device=args.device, dtype=torch.float)
-    #             # stds = torch.stack([stds for _ in range(len(teacher.logits))])  # 自己伪造的 stds
-    #             loss = sum([get_kl([teacher_mu, teacher_sigma], [student_mu, student_sigma])
-    #                         for teacher_mu in teacher_mus
-    #                         for teacher_sigma in teacher_sigmas
-    #                         for student_mu in student_mus
-    #                         for student_sigma in student_sigmas])
-    #             if logger:
-    #                 # print('loss/kl_loss')
-    #                 logger.log_kl_loss({'loss/kl_loss': loss}, step)
-    #
-    #             # loss = get_kl([teacher.logits, stds], [student.logits, stds])
-    #             policy_student.actor_optim.zero_grad()
-    #             loss.backward()
-    #             policy_student.actor_optim.step()
-    #         if update_times > 1:
-    #             print('update student time: ', time.perf_counter() - begin_time)
-    #     else:
-    #         print('bad teacher do not update student')
-
-
     # test train_collector and start filling replay buffer
     train_collector.collect(n_step=args.batch_size * args.training_num)
     # trainer
     result = offpolicy_trainer(
         policy, train_collector, test_collector, args.epoch,
         args.step_per_epoch, args.step_per_collect, args.test_num,
-        args.batch_size, train_fn=train_fn,
-        update_student_fn=update_student, test_student_collector=test_student_collector, policy_student=policy_student,
-        save_student_policy_fn=save_student_policy_fn,
-        test_fn=test_fn, stop_fn=stop_fn, save_fn=save_fn, logger=logger,
+        args.batch_size, train_fn=train_fn, test_fn=test_fn,
+        stop_fn=stop_fn, save_fn=save_fn, logger=logger,
         update_per_step=args.update_per_step, test_in_train=False)
 
     pprint.pprint(result)
@@ -254,3 +173,4 @@ def test_dqn(args=get_args()):
 
 if __name__ == '__main__':
     test_dqn(get_args())
+

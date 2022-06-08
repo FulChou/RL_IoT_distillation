@@ -10,9 +10,7 @@ from torch.utils.tensorboard import SummaryWriter
 import matplotlib.pyplot as plt
 import sys
 
-
-
-sys.path.append(os.path.join(os.path.dirname(__file__),'..')) # 使得命令行直接调用时，能够访问到我们自定义的tianshou
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))  # 使得命令行直接调用时，能够访问到我们自定义的tianshou
 # print(sys.path)
 from tianshou.trainer.offpolicy_v2 import offpolicy_trainer_v2
 from tianshou.trainer.offpolicy_v3_epoch_update_student import offpolicy_v3_epoch_update_student
@@ -94,7 +92,7 @@ def test_dqn(args=get_args()):
               args.action_shape, args.device).to(args.device)
 
     student_net = DQN(*args.state_shape,
-              args.action_shape, args.device,).to(args.device)
+                      args.action_shape, args.device, ).to(args.device)
 
     optim = torch.optim.Adam(net.parameters(), lr=args.lr)
     student_optim = torch.optim.Adam(student_net.parameters(), lr=args.lr)
@@ -102,7 +100,7 @@ def test_dqn(args=get_args()):
     policy = DQNPolicy(net, optim, args.gamma, args.n_step,
                        target_update_freq=args.target_update_freq)
     policy_student = DQNPolicy(student_net, student_optim, args.gamma, args.n_step,
-                       target_update_freq=args.target_update_freq)  # test  target_update_freq = 0
+                               target_update_freq=args.target_update_freq)  # test  target_update_freq = 0
 
     # load a previous policy
     if args.resume_path:
@@ -124,7 +122,7 @@ def test_dqn(args=get_args()):
 
     # log
     t0 = datetime.datetime.now().strftime("%y%m%d_%H%M%S")
-    log_file = f'seed_{args.seed}_{t0}-lr{args.lr}-{args.task.replace("-", "_")}'+'debug6-doublestate'
+    log_file = f'seed_{args.seed}_{t0}-lr{args.lr}-{args.task.replace("-", "_")}' + 'debug6-doublestate'
     log_path = os.path.join(args.logdir, args.task, 'dqn', log_file)
     print('log_path', log_path)
     writer = SummaryWriter(log_path)
@@ -153,7 +151,7 @@ def test_dqn(args=get_args()):
         # nature DQN setting, linear decay in the first 1M steps
         if env_step <= 1e6:
             eps = args.eps_train - env_step / 1e6 * \
-                (args.eps_train - args.eps_train_final)
+                  (args.eps_train - args.eps_train_final)
         else:
             eps = args.eps_train_final
         policy.set_eps(eps)
@@ -193,18 +191,17 @@ def test_dqn(args=get_args()):
     if args.watch:
         watch()
         exit(0)
+
     def draw_loss_distribution(name, pre_loss, key_loss):
         plt.figure(figsize=(16, 12))
         data = []
         data.append(pre_loss)
         data.append(key_loss)
         plt.hist(data, bins=40, density=True, label=('pre_loss', 'key_loss'))
-        # plt.hist(pre_loss, bins=50, density=True)
-        # plt.hist(key_loss, bins=50, density=True)
         my_x_ticks = np.arange(0, 3, 0.1)
         plt.xticks(my_x_ticks)
         plt.savefig(name)
-
+        plt.clf()
 
     def update_student(best_teacher_policy=None, sample_size=1, logger=None, step=0, is_update_student=True):
         loss_bound = 1
@@ -233,7 +230,8 @@ def test_dqn(args=get_args()):
                 key_buffer.add(key_batch, buffer_id)
                 temp_buffer.add(key_batch, buffer_id)
                 key_loss = policy.conmpute_loss(0, temp_buffer)
-                draw_loss_distribution(os.path.join(matlab_log_path, str(len(idxs)) + 'loss_distribution.jpg'), pre_key_loss['loss'], key_loss['loss'])
+                draw_loss_distribution(os.path.join(matlab_log_path, str(len(idxs)) + 'loss_distribution.jpg'),
+                                       pre_key_loss['loss'], key_loss['loss'])
                 train_collector.buffer.reset()
             # batch_all, indice_all = train_collector.buffer.sample(0)  # 复制了多个多余的。。。
             batch, indice = key_buffer.sample(args.batch_size)
@@ -250,7 +248,6 @@ def test_dqn(args=get_args()):
             policy_student.optim.zero_grad()
             loss.backward()
             policy_student.optim.step()
-
 
     # test train_collector and start filling replay buffer
     train_collector.collect(n_step=100 * args.training_num)  # 100 is for 1000 key_frame

@@ -10,10 +10,10 @@
 
 function cssInd = findRep(C,thr,q)
 
-if (nargin < 4)
+if (nargin < 3)
     q = 2;
 end
-if (nargin < 3)
+if (nargin < 2)
     thr = 0.9;
 end
 

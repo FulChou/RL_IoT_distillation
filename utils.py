@@ -5,6 +5,7 @@ import math
 from torch.nn.functional import softmax
 from torch.distributions import Normal
 from torch.distributions.kl import kl_divergence
+import time
 
 def normal_entropy(std):
     var = std.pow(2)
@@ -39,3 +40,15 @@ def get_wasserstein(teacher_dist_info, student_dist_info):
     means_s, stds_s = student_dist_info
     return torch.sum((means_s - means_t) ** 2) + torch.sum((torch.sqrt(stds_s) - torch.sqrt(stds_t)) ** 2)
 
+
+class CountTime:
+    def __init__(self, label):
+        self.label = label
+
+    def __enter__(self):
+        self.start = time.time()
+        return self
+
+    def __exit__(self, exc_ty, exc_val, exc_tb):
+        end = time.time()
+        self.res = '{}: {}'.format(self.label, end - self.start)

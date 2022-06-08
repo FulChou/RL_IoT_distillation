@@ -25,6 +25,7 @@ def offpolicy_trainer(
         policy_student: BasePolicy = None,
         train_fn: Optional[Callable[[int, int], None]] = None,
         update_student_fn: Optional[Callable[[int, int], None]] = None,
+        key_buffer = None,
         test_fn: Optional[Callable[[int, Optional[int]], None]] = None,
         stop_fn: Optional[Callable[[float], bool]] = None,
         save_fn: Optional[Callable[[BasePolicy], None]] = None,
@@ -123,8 +124,8 @@ def offpolicy_trainer(
             while t.n < t.total:
                 if train_fn:
                     train_fn(epoch, env_step)
-                # if update_student_fn and is_update_student:  # every epoch update student maybe couldn't need so many update
-                #     update_student_fn(logger=logger, step=env_step,)
+                if update_student_fn:  # every epoch update student maybe couldn't need so many update
+                    update_student_fn(logger=logger, step=env_step)
                 result = train_collector.collect(n_step=step_per_collect)
                 if result["n/ep"] > 0 and reward_metric:
                     result["rews"] = reward_metric(result["rews"])
@@ -176,10 +177,6 @@ def offpolicy_trainer(
 
         if best_epoch < 0 or best_reward < rew:
             best_epoch, best_reward, best_reward_std = epoch, rew, rew_std
-            # best_teacher_policy = policy.state_dict()  # TODO: 保存模型结构和参数直接到 硬盘上，然后再load!!
-            # 如果只在找到最后的 policy 之后进行 模型的蒸馏， 根本找不到好的学习，直接坏掉
-            # if update_student_fn:  # every epoch update student maybe couldn't need so many update
-            #     update_student_fn(best_teacher_policy=best_teacher_policy,update_times=100)
             if save_fn:
                 if best_epoch > 0:
                     best_teacher_policy = save_fn(policy)
@@ -200,9 +197,6 @@ def offpolicy_trainer(
                     save_student_policy_fn(policy_student)
 
         logger.save_data(epoch, env_step, gradient_step, save_checkpoint_fn)
-        if update_student_fn:  # every epoch update student maybe couldn't need so many update
-            update_student_fn(logger=logger, step=env_step)
-            # update_student_fn(logger=logger, step=env_step, update_times=5000, sample_size=1, is_update_student=is_update_student)
 
         if verbose:
             print(f"Epoch #{epoch}: test_reward: {rew:.6f} ± {rew_std:.6f}, test_student_reward: {rew_student:.6f} ± {rew_std_student:.6f},"
