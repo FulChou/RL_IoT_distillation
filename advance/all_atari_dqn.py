@@ -3,6 +3,7 @@ import datetime
 from multiprocessing.connection import wait
 # import imp
 import os
+from random import random, sample
 import time
 
 
@@ -16,7 +17,7 @@ import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__),'..')) # 使得命令行直接调用时，能够访问到我们自定义的tianshou
 # from advance.to_matlab import call_matlab_state_by
-from advance.tcp_client import set_data
+# from advance.tcp_client import set_data
 # import matlab
 # import key_state_by
 from tianshou.policy import DQNPolicy
@@ -113,7 +114,7 @@ def test_dqn(args=get_args()):
     test_collector = Collector(policy, test_envs, exploration_noise=True)
     # log
     t0 = datetime.datetime.now().strftime("%y%m%d_%H%M%S")
-    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}' + '-500-0.92-200/1k'
+    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}' + '-all-500-0.95-200'
     log_path = os.path.join(args.logdir, args.task, 'dqn', log_file)
     print(log_path)
     writer = SummaryWriter(log_path)
@@ -188,39 +189,11 @@ def test_dqn(args=get_args()):
 
     def update_student(best_teacher_policy=None, sample_size=1, logger=None, step=0,):
         if len(train_collector.buffer) >= 1e3:
-
             batch_all, indice_all = train_collector.buffer.sample(0)
-            # pre_key_loss = policy.conmpute_loss(0, train_collector.buffer)
-
-            # with CountTime('call matlab time: ') as t:
-            s_t = time.perf_counter()
-            matlab_log_path = os.path.join(log_path, str(step))
-            # os.makedirs(matlab_log_path)
-            # idxs = call_matlab_state_by(batch_all, matlab_log_path)
-            idxs = set_data(batch_all)
-            
-            # idxs = call_matlab_state_by(batch_all, matlab_log_path, 1e2, 0.9, 200) #只需要取四个中的一个就行，反正都是一样的！ 重要知道到了
-            res = time.perf_counter() - s_t
-            # print(idxs)
-
-            with open(os.path.join(log_path, 'all_time.txt'), 'a') as f:
-                f.write( 'time: {} and original state {} key state {} \n'.\
-                format(str(res), str(len(indice_all)), str(len(idxs))) )
-
-            idxs = list(map(int, idxs))
-            idxs = [i - 1 for i in idxs]
-            key_batch = batch_all[idxs]
-            key_indice = indice_all[idxs]
-            buffer_id = [int(i // 1e4) for i in key_indice]
-
-
-            key_buffer.add(key_batch, buffer_id)
-            # temp_buffer = VectorReplayBuffer(
-            #     args.buffer_size, buffer_num=len(train_envs), ignore_obs_next=True,
-            #     save_only_last_obs=True, stack_num=args.frames_stack)
-            # temp_buffer.add(key_batch, buffer_id)
-            # key_loss = policy.conmpute_loss(0, temp_buffer)
-            # draw_loss_distribution(os.path.join(matlab_log_path, str(len(idxs)) + 'loss_distribution.jpg'), pre_key_loss['loss'], key_loss['loss'])
+         
+            buffer_id = [int(i // 1e4) for i in indice_all]
+            key_buffer.add(batch_all, buffer_id)
+    
             train_collector.buffer.reset()
 
 

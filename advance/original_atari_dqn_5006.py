@@ -16,7 +16,7 @@ import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__),'..')) # 使得命令行直接调用时，能够访问到我们自定义的tianshou
 # from advance.to_matlab import call_matlab_state_by
-from advance.tcp_client import set_data
+from advance.tcp_client_5006 import set_data
 # import matlab
 # import key_state_by
 from tianshou.policy import DQNPolicy
@@ -113,7 +113,7 @@ def test_dqn(args=get_args()):
     test_collector = Collector(policy, test_envs, exploration_noise=True)
     # log
     t0 = datetime.datetime.now().strftime("%y%m%d_%H%M%S")
-    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}' + '-500-0.92-200/1k'
+    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}' + '-500-0.99-200/1k'
     log_path = os.path.join(args.logdir, args.task, 'dqn', log_file)
     print(log_path)
     writer = SummaryWriter(log_path)
@@ -204,8 +204,7 @@ def test_dqn(args=get_args()):
             # print(idxs)
 
             with open(os.path.join(log_path, 'all_time.txt'), 'a') as f:
-                f.write( 'time: {} and original state {} key state {} \n'.\
-                format(str(res), str(len(indice_all)), str(len(idxs))) )
+                f.write( 'time: {} and key state {} \n'.format(str(res), str(len(idxs))) )
 
             idxs = list(map(int, idxs))
             idxs = [i - 1 for i in idxs]

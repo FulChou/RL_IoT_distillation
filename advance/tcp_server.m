@@ -17,7 +17,7 @@ function requestDataCommand(src,~)
         disp("The Connected and ClientAddress properties of the tcpserver object show that the Arduino is connected.")
         disp(src.BytesAvailableFcnMode)
         lambda = 500;
-        threshold = 0.95;
+        threshold = 0.92;
         maxiter = 200;
         % Request the Arduino to send data.
        
@@ -41,7 +41,6 @@ tStart = tic;
 shape = size(input);
 
 % add path
-
 list = {'funcs'};
 for i = 1:length(list)
     addpath(genpath(list{i}),'-begin');
@@ -78,7 +77,7 @@ lambda=[lambda];  % 5000, 1e4
 info.maxiter = maxiter;
 info.regcase='L21';
 info.convergetol = 4e-4;
-info.rzero=1e-2; %-6,-3
+% info.rzero=1e-2; %-6,-3
 info.evaltrigger=0;
 D = YY; %32400 x 948
 
@@ -153,7 +152,7 @@ for idx = 1: length(lambda)
     %colormap(gca, 'gray') % 使用 gca 指代当前坐标区。
     %saveas(gcf,[int2str(idx), 'heatmap.jpg'])
 
-%     t_heatmap_end = toc(t_heatmap_start);
+    % t_heatmap_end = toc(t_heatmap_start);
     %fprintf('heatmap time: %.2f \n', t_heatmap_end)
 end
 

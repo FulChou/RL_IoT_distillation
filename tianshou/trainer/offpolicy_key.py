@@ -11,7 +11,7 @@ from tianshou.trainer.utils import test_student_episode
 from tianshou.utils import tqdm_config, MovAvg, BaseLogger, LazyLogger
 
 
-def offpolicy_trainer(
+def offpolicy_trainer_key(
         policy: BasePolicy,
         train_collector: Collector,
         test_collector: Collector,

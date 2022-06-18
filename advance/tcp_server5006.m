@@ -16,8 +16,8 @@ function requestDataCommand(src,~)
         % Display the server object to see that Arduino client has connected to it.
         disp("The Connected and ClientAddress properties of the tcpserver object show that the Arduino is connected.")
         disp(src.BytesAvailableFcnMode)
-        lambda = 100;
-        threshold = 0.9;
+        lambda = 500;
+        threshold = 0.99;
         maxiter = 200;
         % Request the Arduino to send data.
        

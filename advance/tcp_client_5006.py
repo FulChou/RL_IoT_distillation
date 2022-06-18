@@ -5,7 +5,7 @@ import time
 tcpClientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 print('socket---%s'%tcpClientSocket)
 #链接服务器
-serverAddr = ('127.0.0.1', 5005)
+serverAddr = ('127.0.0.1', 5006)
 tcpClientSocket.connect(serverAddr)
 print('connect success!')
 
